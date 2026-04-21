@@ -1,0 +1,389 @@
+#!/bin/sh
+## configure: UNIX
+##
+## details:
+##
+##  configure will *always* check for a pre-installed
+##  TA-Lib using default locations using #include <ta-lib/ta_libc.h>
+##  whether it builds, or not, is left to mercy of your installed compiler (gcc).
+##  If the routine can't be built (and the reason does not matter) configure
+##  will use the vendored TA-Lib located in src/ta-lib
+##  This behaviour can be overridden by passing --force-vendor
+## 
+set -eu
+
+## {pkg} information
+RPKGNAME=$(grep "^Package:" DESCRIPTION | sed "s/Package: //")
+RPKGVERSION=$(grep "^Version:" DESCRIPTION | sed "s/Version: //")
+
+echo
+echo Configure for {$RPKGNAME} v$RPKGVERSION
+echo
+
+## utility functions
+##
+## details:
+##  these functions serves absolutely no *real*
+##  purpose other than coloring simplifying the
+##  messages sent to the host.
+##
+##  NOTE: defined before the argument parser so the
+##        helpers are available if an unknown flag
+##        triggers an error message.
+error() {
+    printf '\e[0;31m%s\033[0m' "Build-error:"
+}
+
+url() {
+    printf '\e[0;34m%s\033[0m' $1
+}
+
+var() {
+    printf '\e[0;34m%s\033[0m' $1
+}
+
+info() {
+    printf '\e[0;34m%s\033[0m' "Build-step:"
+}
+
+success() {
+    printf '[\e[0;32m%s\033[0m]' "OK"
+}
+
+warning() {
+    printf '[\e[0;33m%s\033[0m]' "Failed"
+}
+
+## details:
+##  this function generates a temporary
+##  directory for building the libraries
+##  and is deleted after configure is done
+temporary_directory() {
+  dir="$(mktemp -d)" || {
+    echo
+    printf '%s\n' "$(error) could not create temporary directory"
+    exit 1
+  }
+  printf '%s' "$dir"
+}
+
+## configure args and vars
+##
+## details:
+##  args are passed as: --configure-args="--foo-bar"
+##  vars are passed as: --configure-vars="FOO='DOTHIS'"
+##
+##  args:
+##      --force-vendor: if passed it will use the vendored
+##          TA-Lib via CMake
+##
+##  any other argument is forwarded verbatim as a C/C++
+##  compiler flag to both the vendored TA-Lib (CMake) build
+##  and the R wrapper compile step (Makevars). Example:
+##
+##      R CMD INSTALL . --configure-args="-O3 -march=native"
+##
+##  NOTE: binaries built with -march=native are tied to the
+##        build host's CPU features and are NOT portable.
+##
+##  vars:
+##
+FORCE_VENDOR=0
+OPTFLAGS=""
+for arg in "$@"; do
+  case "$arg" in
+    --force-vendor)
+      FORCE_VENDOR=1
+      ;;
+    *)
+      OPTFLAGS="${OPTFLAGS} ${arg}"
+      ;;
+  esac
+done
+
+if [ -n "$OPTFLAGS" ]; then
+    printf '%s Forwarding compiler flags:%s\n' "$(info)" "$OPTFLAGS"
+fi
+
+## sanity checks
+##
+## details:
+##  taken from the 'Writing R Extensions' these steps
+##  should always be included.
+printf '%s Checking for %s' "$(info)" "$(var R_HOME)"
+
+## details:
+##  check R_HOME
+: ${R_HOME=`R RHOME`}
+if test -z "${R_HOME}"; then
+    printf ' %s\n'"$(warning)"
+    printf '%s could not determine %s\n'"$(error)" "$(var R_HOME)"
+    printf '\n'
+    exit 1
+else 
+    printf ' %s\n' "$(success)"
+    R_BIN="${R_HOME}/bin/R"
+fi
+
+## details:
+##  compile a small C-routine with R CMD SHLIB
+##  as a belt and buckles test
+printf '%s Compiling C-program with R CMD SHLIB' "$(info)"
+SHLIB_TEST=$(temporary_directory)
+
+cat > "${SHLIB_TEST}/conftest.c" <<'EOF'
+void foo(void) {}
+EOF
+
+if ! ( cd "$SHLIB_TEST" && "$R_BIN" CMD SHLIB conftest.c >/dev/null 2>&1 ); then
+  printf ' %s\n' "$(warning)"
+  echo $(error) R CMD SHLIB test compilation failed. Build-tools may be missing or misconfigured.
+  exit 1
+fi
+
+printf ' %s\n' $(success)
+rm -rf $SHLIB_TEST
+
+## TA-Lib availability
+##
+## details:
+##  CRAN requires that compiled packages
+##  that uses external libraries should always
+##  default to the users installation
+printf '%s Compiling TA-Lib program with system headers' "$(info)"
+TALIB_SYSTEM=$(temporary_directory)
+
+cat > "${TALIB_SYSTEM}/conftest.c" <<'EOF'
+#include <ta-lib/ta_libc.h>
+int main(void){ return 0; }
+EOF
+
+## details:
+##  1 is BASH for EXIT, 0 is for SUCCESS 
+##  so the logic is reversed here
+: "${CC:=$("$R_BIN" CMD config CC)}"
+if ! ( cd "$TALIB_SYSTEM" && $CC conftest.c >/dev/null 2>&1 ); then
+    printf ' %s\n' "$(warning)"
+    PREINSTALLED=1
+else
+    printf ' %s\n' "$(success)"
+    PREINSTALLED=0
+fi
+rm -rf $TALIB_SYSTEM
+
+## conditional building using CMake
+## for vendored TA-Lib
+## 
+## details:
+##  if --force-vendor is passed FORCE_VENDOR
+##  is set to 1, 0 otherwise - so everything
+##  is based on the above compilation
+if [ "$(( PREINSTALLED + FORCE_VENDOR ))" -ne 0 ]; then
+    TALIB="src/ta-lib" # vendor location
+    
+    ## vendor check start
+    if [ ! -d "$TALIB" ]; then
+
+        if ! command -v git > /dev/null 2>&1; then
+            printf ' %s\n' "$(warning)"
+            echo
+            echo $(error) Git is not found on default PATH.
+            echo
+            echo "=========================================================================="
+            echo "Install Git:"
+            echo "  Linux:"
+            echo "    Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y git"
+            echo "    Fedora/RHEL/CentOS: sudo dnf install -y git"
+            echo "    Arch: sudo pacman -S --needed git"
+            echo "    openSUSE: sudo zypper install -y git"
+            echo
+            echo "  macOS:"
+            echo "    Homebrew: brew install git"
+            echo "    MacPorts: sudo port install git"
+            echo "    Xcode CLT (also installs Git): xcode-select --install"
+            echo 
+            echo "After installation, ensure 'git' is on PATH and restart the shell/terminal."
+            echo
+            echo "=========================================================================="
+            echo "Submit bug-reports here: $(url https://github.com/serkor1/ta-lib-R)"
+            echo
+            exit 1
+        fi
+
+        if git -C . status > /dev/null 2>&1; then
+            printf ' %s\n' "$(warning)"
+            printf "Build-error: $TALIB not found. Either make a new clone, or initialize the submodule.\n"
+            printf "Clone:\t\tgit clone --recursive $(url https://github.com/serkor1/ta-lib-R.git)\n"
+            printf "Initialize:\tgit submodule update --init --recursive\n"
+            exit 1
+        
+        ## if its NOT a git repository it is safe to assume that the development
+        ## version is being installed via {pak} or other tools which does not 
+        ## include submodules by default
+        else
+        printf ' %s\n' "$(warning)"
+        echo
+        echo "TA-Lib (core) not found. Cloning $(url https://github.com/TA-Lib/ta-lib.git)"
+        echo
+        git clone https://github.com/TA-Lib/ta-lib.git ${TALIB} || {
+
+            echo $(error) Could not clone $(url https://github.com/TA-Lib/ta-lib.git).
+            echo Check your internet connection, or submit a bug-report.
+            exit 1
+            }
+        fi
+
+    fi
+
+    ## vendor check end
+    TARGET="$(cd "$TALIB" 2>/dev/null && pwd)/local"
+
+    ## NOTE: this builds a temporary
+    ##       directory to build TA-Lib
+    ##       without this step .Rbuildignore will riot.
+    ##       $TARGET must NOT be cleaned here — R CMD INSTALL
+    ##       links against libta-lib.a inside it after configure
+    ##       completes.
+    BUILDLOCATION=$(temporary_directory)
+    trap 'rm -rf "$BUILDLOCATION"' EXIT
+
+    if command -v cmake >/dev/null 2>&1 && [ -f "$TALIB/CMakeLists.txt" ]; then
+        printf '%s Configure and generate TA-Lib\n' "$(info)"
+
+        cmake -S "$TALIB" -B "${BUILDLOCATION}" \
+            -Wno-dev --log-level=NOTICE \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$TARGET" \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_C_FLAGS="-w -fPIC ${OPTFLAGS}" \
+            -DCMAKE_CXX_FLAGS="-w -fPIC ${OPTFLAGS}" \
+            -DBUILD_DEV_TOOLS=OFF
+
+        printf '%s\n' "$(success)"
+
+        printf '%s Build and install TA-Lib\n' "$(info)"
+
+        cmake --build "${BUILDLOCATION}" --target install -- -j"$(nproc --ignore 2)"
+
+        printf '%s\n' "$(success)"
+
+    else
+        ## NOTE: after many attempts I can't make 
+        ##       configure "work" using libtools. It either complains about
+        ##       missing libraries, or links.
+        ##
+        ##       CMake just works well here, end of story.
+        printf ' %s\n' "$(error)"
+        printf 'CMake not found on PATH'
+        echo "=========================================================================="
+        echo "Install CMake:"
+        echo "  Linux:"
+        echo "    Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y cmake"
+        echo "    Fedora/RHEL/CentOS: sudo dnf install -y cmake"
+        echo "    Arch: sudo pacman -S --needed cmake"
+        echo "    openSUSE: sudo zypper install -y cmake"
+        echo
+        echo "  macOS:"
+        echo "    Homebrew: brew install cmake"
+        echo "    MacPorts: sudo port install cmake"
+        echo
+        echo "Alternatively download the installer: https://cmake.org/download/"
+        echo "After installation, restart the shell or add CMake to PATH"
+        echo "=========================================================================="
+        echo "Submit bug-reports here: $(url https://github.com/serkor1/ta-lib-R)"
+        echo
+        exit 1
+    fi
+
+fi
+
+## Makevars
+## 
+## details:
+##  this is probably the most important step, if done
+##  incorrectly the uptream build wont be linked to R
+printf '%s Constructing %s and %s' "$(info)" "$(var PKG_CFLAGS)" "$(var PKG_LIBS)"
+CFLAGS=""
+if [ $PREINSTALLED -eq 0 ]; then
+
+    if ! command -v pkg-config >/dev/null 2>&1; then
+        printf ' %s\n' "$(warning)"
+        echo $(error) pkg-config not found on default PATH
+        echo "=========================================================================="
+        echo "Install pkg-config:"
+        echo "  Linux:"
+        echo "    Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y pkg-config"
+        echo "    Fedora/RHEL/CentOS: sudo dnf install -y pkgconf-pkg-config"
+        echo "    Arch: sudo pacman -S --needed pkgconf"
+        echo "    openSUSE: sudo zypper install -y pkg-config"
+        echo
+        echo "  macOS:"
+        echo "    Homebrew: brew install pkg-config"
+        echo "    MacPorts: sudo port install pkgconfig"
+        echo
+        echo "After installation, restart the shell or ensure pkg-config is on PATH"
+        echo "=========================================================================="
+        echo "Submit bug-reports here: $(url https://github.com/serkor1/ta-lib-R)"
+        echo
+        exit 1
+    fi
+    
+    if pkg-config --exists ta-lib; then
+        incdir="$(pkg-config --variable=includedir ta-lib)"
+        libdir="$(pkg-config --variable=libdir ta-lib)"
+        CFLAGS="-I$incdir -I$incdir/ta-lib"
+        PKG_LIBS="-L$libdir -lta-lib"
+    else
+        printf ' %s\n' "$(warning)"
+        echo $(error) pkg-config failed to link TA-Lib. 
+        echo This is a bug, please submit a issue here: $(url https://github.com/serkor1/ta-lib-R)
+        exit 1
+    fi
+
+else
+    CFLAGS="-I${TARGET##*/src/}/include -I${TARGET##*/src/}/include/ta-lib"
+    SEARCH_DIR="$TALIB/local/lib/"
+
+    ## details
+    ##  find the first *.a file to be linked
+    ##  to R
+    PKG_LIBS=$( find "$SEARCH_DIR" -maxdepth 1 -type f -name '*.a' | head -n 1 )
+
+    if [ -z "$PKG_LIBS" ]; then
+       printf ' %s\n' "$(warning)"
+        echo $(error) Could not find static libraries in $SEARCH_DIR.
+        echo This is a bug, please submit a issue here: $(url https://github.com/serkor1/ta-lib-R)
+        exit 1
+    fi
+    PKG_LIBS="${PKG_LIBS##*src/} -lm"
+fi
+
+## Opt-in strict warnings for the R wrapper compile step.
+## Triggered by 'make check' via TALIB_STRICT_WARNINGS=1.
+## Flags are appended to PKG_CFLAGS only, NOT to the CMake
+## build of vendored ta-lib (which keeps -w) — this prevents
+## ta-lib's own code from drowning the log.
+if [ "${TALIB_STRICT_WARNINGS:-0}" = "1" ]; then
+    WARN_FLAGS="-Wall -Wpedantic -Wextra -Wno-unused-parameter -Wno-cast-function-type"
+    printf '%s Strict warnings enabled: %s\n' "$(info)" "$WARN_FLAGS"
+else
+    WARN_FLAGS=""
+fi
+
+CFLAGS="$CFLAGS $OPTFLAGS $WARN_FLAGS"
+printf ' %s\n' "$(success)"
+
+printf '%s Constructing %s' "$(info)" "$(var Makevars)"
+
+cat > src/Makevars <<EOF
+# autogenerated by configure
+PKG_CFLAGS = $CFLAGS
+PKG_LIBS   = $PKG_LIBS
+EOF
+
+printf ' %s\n' "$(success)"
+
+echo 
+echo Configure status $(success)
+echo

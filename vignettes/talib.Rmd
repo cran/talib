@@ -1,0 +1,281 @@
+---
+title: "{talib}: R bindings to TA-Lib"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{{talib}: R bindings to TA-Lib}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+## set chart options
+options(talib.chart.dark = FALSE)
+
+knitr::opts_chunk$set(
+	collapse = TRUE,
+	comment = "#>",
+	out.width = "100%",
+	out.height = "680",
+	fig.align = "center"
+)
+```
+
+[{talib}](https://github.com/serkor1/ta-lib-R/) is an R package for Technical Analysis (TA) and interactive financial charts. The package is a wrapper of [TA-Lib](https://github.com/TA-Lib/ta-lib) and supports over 200 indicators, including candlestick patterns.
+
+## Data format
+
+All functions in [{talib}](https://github.com/serkor1/ta-lib-R/) expect the input `x` to be coercible to `data.frame` with columns named according to OHLC-V conventions. The package ships with several built-in datasets:
+
+```{r}
+str(talib::BTC)
+```
+
+### Column names are case-sensitive
+
+Column names **must** be lowercase: `open`, `high`, `low`, `close`, and `volume`. Names such as `Close`, `CLOSE`, or `Adj.Close` will not be recognized. If your data uses different names you have two options: rename the columns, or remap them with the `cols` argument (see [Column selection with `cols`](#column-selection-with-cols)).
+
+```{r, error = TRUE}
+## rename columns to uppercase;
+## this will fail
+x <- talib::BTC
+colnames(x) <- c("Open", "High", "Low", "Close", "Volume")
+
+talib::RSI(x)
+```
+
+### Not every column is always required
+
+Different indicators use different subsets of the OHLC-V columns. The table below gives a rough guide:
+
+| Indicator type | Default columns | Example |
+|:---|:---|:---|
+| Univariate (most) | `close` | `RSI()`, `SMA()`, `EMA()` |
+| High-Low based | `high + low` | `SAR()`, `AROON()` |
+| High-Low-Close | `high + low + close` | `STOCH()`, `CCI()`, `ATR()` |
+| Full OHLC | `open + high + low + close` | All candlestick patterns |
+| Volume-based | `volume` (+ price columns) | `OBV()`, `AD()`, `MFI()` |
+
+A `data.frame` that only contains `high`, `low`, and `close` is perfectly valid input for `STOCH()` or `CCI()`---columns that are not needed are simply ignored.
+
+## Computing indicators
+
+### Basic usage
+
+Pass an OHLC-V object directly to any indicator function:
+
+```{r}
+tail(
+	talib::bollinger_bands(talib::BTC)
+)
+```
+
+All indicator functions follow the same S3 dispatch pattern, with methods for `data.frame`, `matrix`, `numeric`, and `plotly`. The return type matches the input type:
+
+```{r}
+## data.frame in -> data.frame out
+class(
+	talib::RSI(talib::BTC)
+)
+```
+
+```{r}
+## matrix in -> matrix out
+class(
+	talib::RSI(talib::SPY)
+)
+```
+
+```{r}
+## numeric vector in -> numeric vector out
+is.double(
+	talib::RSI(talib::BTC$close)
+)
+```
+
+### Function naming
+
+Every indicator has a descriptive snake_case name and an uppercase alias that mirrors the TA-Lib C function name. Both are interchangeable:
+
+```{r}
+## these are equivalent
+identical(
+	talib::relative_strength_index(talib::BTC, n = 14),
+	talib::RSI(talib::BTC, n = 14)
+)
+```
+
+### Lookback and `NA` values
+
+Most indicators require a minimum number of observations before they can produce a value. This is called the **lookback period**. The first `lookback` rows of the result will be `NA`:
+
+```{r}
+## SMA with n = 5 has a lookback of 4
+head(
+	talib::SMA(talib::BTC, n = 5),
+	n = 7
+)
+```
+
+The lookback is stored as an attribute on the result:
+
+```{r}
+x <- talib::SMA(talib::BTC, n = 20)
+attr(x, "lookback")
+```
+
+## Column selection with `cols`
+
+The `cols` argument accepts a one-sided formula (`~`) that selects which columns to use for the calculation. Every indicator has a sensible default, but `cols` lets you override it.
+
+### Univariate indicators
+
+For indicators that operate on a single series (e.g., `RSI`, `SMA`), the default is `~close`. Pass a different column to calculate the indicator on that series instead:
+
+```{r}
+## RSI on 'high' instead of 'close'
+tail(
+	talib::RSI(talib::BTC, cols = ~high)
+)
+```
+
+### Multivariate indicators
+
+For indicators that require multiple columns, `cols` remaps which columns are used. The order in the formula must match the order expected by the indicator:
+
+```{r}
+## Stochastic defaults to ~high + low + close;
+## here we swap 'close' for 'open'
+tail(
+	talib::STOCH(
+		talib::BTC,
+		cols = ~high + low + open
+	)
+)
+```
+
+### Extra arguments via `...`
+
+Additional arguments are forwarded to `model.frame()`. This is useful for computing an indicator on a subset of the data:
+
+```{r}
+## Bollinger Bands on the first 100 rows only
+tail(
+	talib::BBANDS(
+		talib::BTC,
+		subset = 1:nrow(talib::BTC) %in% 1:100
+	)
+)
+```
+
+## Handling missing values with `na.bridge`
+
+Real-world data often contains missing values. By default (`na.bridge = FALSE`), any `NA` in the input propagates through the entire calculation, which can fill the result with `NA`s.
+
+Setting `na.bridge = TRUE` strips `NA` rows before calculation, computes the indicator on the clean data, and then re-inserts `NA`s at their original positions:
+
+```{r}
+## inject some NAs
+x <- talib::BTC
+x$close[c(10, 50, 100)] <- NA
+```
+
+```{r}
+## default: NAs propagate
+sum(is.na(
+	talib::RSI(x)
+))
+```
+
+```{r}
+## na.bridge = TRUE: NAs are skipped
+sum(is.na(
+	talib::RSI(x, na.bridge = TRUE)
+))
+```
+
+The stripped rows are restored in the output, so the result always has the same number of rows as the input:
+
+```{r}
+nrow(talib::RSI(x, na.bridge = TRUE)) == nrow(x)
+```
+
+## Moving Average specifications
+
+Several indicators accept a **Moving Average specification** for their smoothing component. MA functions such as `SMA()`, `EMA()`, `WMA()`, `DEMA()`, `TEMA()`, `TRIMA()`, `KAMA()`, and `T3()` serve a dual purpose:
+
+- **With `x`**: compute the Moving Average on the data.
+- **Without `x`**: return a specification (a named list) that other indicators use internally.
+
+```{r}
+## SMA as a specification
+str(
+	talib::SMA(n = 20)
+)
+```
+
+This specification can be passed to indicators like `bollinger_bands()` or `stochastic()` to control the type of smoothing:
+
+```{r}
+## Bollinger Bands with an EMA(20) middle band
+tail(
+	talib::bollinger_bands(
+		talib::BTC,
+		ma = talib::EMA(n = 20)
+	)
+)
+```
+
+```{r}
+## Stochastic with WMA smoothing
+tail(
+	talib::stochastic(
+		talib::BTC,
+		slowk = talib::WMA(n = 5),
+		slowd = talib::EMA(n = 3)
+	)
+)
+```
+
+## Candlestick pattern recognition
+
+Candlestick pattern functions return an integer `matrix`: `1` for bullish, `-1` for bearish, and `0` for no pattern. The encoding can be changed via `options(talib.normalize = FALSE)` to use `100`/`-100` instead.
+
+```{r}
+x <- talib::harami(talib::BTC)
+tail(x)
+```
+
+```{r}
+## find all bullish occurrences
+talib::BTC[which(x == 1), ]
+```
+
+> **Note:** For a detailed treatment of candlestick lookback and sensitivity parameters, see `vignette("candlestick", package = "talib")`.
+
+## Charting
+
+The package includes interactive charting built on [{plotly}](https://github.com/plotly/plotly.R). The two main functions are `chart()` and `indicator()`, which work like `plot()` and `lines()`:
+
+```{r chart(basic)}
+{
+	## main candlestick chart
+	talib::chart(talib::BTC)
+
+	## add Bollinger Bands
+	talib::indicator(talib::bollinger_bands)
+
+	## add identified Harami patterns
+	talib::indicator(talib::harami)
+
+	## add MACD as a sub-chart
+	talib::indicator(talib::MACD)
+}
+```
+
+`indicator()` automatically determines whether a given indicator belongs on the main price chart (e.g., Bollinger Bands, SAR) or as a sub-chart (e.g., RSI, MACD).
+
+> **Note:** For themes, chart options, and advanced charting, see `vignette("charting", package = "talib")`.
+
+## Contributing and bug reports
+
+The underlying library, [TA-Lib](https://github.com/TA-Lib/ta-lib), is a long-standing and well-known library but this R wrapper is still in its early stage. All contributions, suggestions, and bug reports are welcome.

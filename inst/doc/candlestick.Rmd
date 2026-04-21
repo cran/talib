@@ -1,0 +1,312 @@
+---
+title: "Candlestick Pattern Recognition"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Candlestick Pattern Recognition}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+	collapse = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	comment = "#>",
+	out.width = "100%",
+	out.height = "520",
+	fig.align = "center"
+)
+```
+
+[{talib}](https://github.com/serkor1/ta-lib-R/) includes 61 candlestick pattern recognition functions ported from [TA-Lib](https://github.com/TA-Lib/ta-lib). This vignette covers how they work, what they return, and how to tune their sensitivity.
+
+## A primer on candlesticks
+
+A candlestick shows four prices for a chosen time period: Open, High, Low, and Close (OHLC).
+
+```{r, echo = FALSE}
+# two example candles
+df <- data.frame(
+	date = as.Date(c("2021-01-01", "2021-01-02")),
+	open = c(30000, 31500),
+	high = c(32000, 31800),
+	low = c(29500, 30500),
+	close = c(31500, 30800)
+)
+
+mid <- (df$close + df$open) / 2
+
+
+annos <- list(
+	list(
+		x = df$date[1],
+		y = mid[1],
+		text = "Candle body (Bullish)",
+		showarrow = FALSE,
+		ax = 0,
+		ay = -40,
+		arrowhead = 2,
+		arrowcolor = "#65a479",
+		font = list(size = 12)
+	),
+	list(
+		x = df$date[1],
+		y = df$high[1],
+		text = "Upper shadow",
+		showarrow = TRUE,
+		ax = 0,
+		ay = -40,
+		arrowhead = 2,
+		arrowcolor = "gray40",
+		font = list(size = 12)
+	),
+	list(
+		x = df$date[1],
+		y = df$low[1],
+		text = "Lower shadow",
+		showarrow = TRUE,
+		ax = 0,
+		ay = 40,
+		arrowhead = 2,
+		arrowcolor = "gray40",
+		font = list(size = 12)
+	),
+
+	list(
+		x = df$date[2],
+		y = mid[2],
+		text = "Candle body (Bearish)",
+		showarrow = FALSE,
+		ax = 0,
+		ay = 40,
+		arrowhead = 2,
+		arrowcolor = "#d5695d",
+		font = list(size = 12)
+	),
+	list(
+		x = df$date[2],
+		y = df$high[2],
+		text = "Upper shadow",
+		showarrow = TRUE,
+		ax = 0,
+		ay = -40,
+		arrowhead = 2,
+		arrowcolor = "gray40",
+		font = list(size = 12)
+	),
+	list(
+		x = df$date[2],
+		y = df$low[2],
+		text = "Lower shadow",
+		showarrow = TRUE,
+		ax = 0,
+		ay = 40,
+		arrowhead = 2,
+		arrowcolor = "gray40",
+		font = list(size = 12)
+	)
+)
+
+
+df |>
+	plotly::plot_ly(
+		x = ~date,
+		open = ~open,
+		high = ~high,
+		low = ~low,
+		close = ~close,
+		type = "candlestick",
+		increasing = list(
+			line = list(color = "#65a479"),
+			fillcolor = "#65a479"
+		),
+		decreasing = list(
+			line = list(color = "#d5695d"),
+			fillcolor = "#d5695d"
+		)
+	) |>
+	plotly::layout(
+		title = "",
+		xaxis = list(
+			title = "", rangeslider = list(visible = FALSE), showticklabels = FALSE, showgrid = FALSE),
+		yaxis = list(
+			title = "", showticklabels = FALSE, showgrid = FALSE),
+		annotations = annos
+	)
+```
+
+The **real body** is the segment between the Open and the Close. If the Close is above the Open the candle is bullish; otherwise it is bearish.
+
+The **upper shadow** extends from the top of the real body to the High; the **lower shadow** extends from the bottom of the real body to the Low. Together the shadows show how far price moved beyond the Open-Close range.
+
+Candlestick patterns are defined by comparing the size and position of bodies and shadows---within a single candle or across a sequence of consecutive candles.
+
+## Available patterns
+
+The 61 pattern functions can be loosely grouped by how many candles they inspect:
+
+| Candles | Examples |
+|:--------|:---------|
+| Single-candle | `doji()`, `hammer()`, `shooting_star()`, `marubozu()`, `spinning_top()`, `long_line()`, `short_line()` |
+| Two-candle | `engulfing()`, `harami()`, `harami_cross()`, `piercing()`, `dark_cloud_cover()`, `kicking()` |
+| Three-candle | `morning_star()`, `evening_star()`, `three_inside()`, `three_outside()`, `three_white_soldiers()`, `three_black_crows()` |
+| Four+ candle | `concealing_baby_swallow()`, `rising_falling_three_methods()`, `mat_hold()`, `break_away()` |
+
+Every function has a descriptive snake_case name and an uppercase alias matching the TA-Lib convention (`doji` / `CDLDOJI`, `engulfing` / `CDLENGULFING`, etc.).
+
+## Return values
+
+All pattern functions require OHLC columns (`~open + high + low + close`) and return an integer matrix of the same length as the input:
+
+- **`1`** --- bullish pattern (or direction-neutral pattern) identified
+- **`-1`** --- bearish pattern identified
+- **`0`** --- no pattern
+
+```{r}
+x <- talib::doji(talib::BTC)
+table(x)
+```
+
+Some patterns are inherently directional (e.g., `engulfing()` returns both `1` and `-1`), while others are direction-neutral (e.g., `doji()` always returns `1` for identified patterns).
+
+### Output encoding
+
+By default, patterns are normalized to `1`/`-1`/`0`. The original TA-Lib encoding (`100`/`-100`/`0`) can be restored with:
+
+```{r}
+options(talib.normalize = FALSE)
+table(talib::engulfing(talib::BTC))
+```
+
+```{r, include = FALSE}
+## restore default
+options(talib.normalize = TRUE)
+```
+
+### The `eps` parameter
+
+Seven patterns accept an `eps` (penetration) parameter that controls how far one candle must intrude into the body of another. These are `morning_star()`, `evening_star()`, `morning_doji_star()`, `evening_doji_star()`, `abandoned_baby()`, `dark_cloud_cover()`, and `mat_hold()`. The default is `eps = 0` for all of them.
+
+```{r}
+## Evening Star with 30% penetration
+x <- talib::evening_star(talib::BTC, eps = 0.3)
+sum(abs(x), na.rm = TRUE)
+```
+
+## Lookback and `NA` values
+
+Every pattern has a **lookback period**: the number of initial rows that are returned as `NA` because the algorithm needs historical context before it can evaluate. The lookback depends on two things: the number of candles in the pattern itself, and the `N` parameter that controls how many prior candles are used to compute reference values for body/shadow classification.
+
+```{r}
+x <- talib::doji(talib::BTC)
+attr(x, "lookback")
+```
+
+## Tuning candlestick settings
+
+Pattern recognition in [{talib}](https://github.com/serkor1/ta-lib-R/) relies on classifying each candle's body and shadows as "long", "short", "doji-like", etc. These classifications are controlled by two parameters per setting:
+
+- **`N`** (lookback): How many prior candles to average when computing the reference value.
+- **`alpha`** (sensitivity): A multiplier applied to the reference value. The current candle is tested against `alpha * reference`.
+
+All settings are modified via `options()` and take effect on the next pattern function call.
+
+### Available settings
+
+The complete list of settings, their defaults, and what they control:
+
+**Body settings:**
+
+| Setting | Option prefix | N | alpha | Rule |
+|:--------|:-------------|--:|------:|:-----|
+| BodyLong | `talib.BodyLong` | 10 | 1.0 | Body is long when longer than the average of the N previous bodies |
+| BodyVeryLong | `talib.BodyVeryLong` | 10 | 3.0 | Body is very long when longer than 3x the average |
+| BodyShort | `talib.BodyShort` | 10 | 1.0 | Body is short when shorter than the average |
+| BodyDoji | `talib.BodyDoji` | 10 | 0.1 | Body is doji-like when shorter than 10% of the average high-low range |
+
+**Shadow settings:**
+
+| Setting | Option prefix | N | alpha | Rule |
+|:--------|:-------------|--:|------:|:-----|
+| ShadowLong | `talib.ShadowLong` | 0 | 1.0 | Shadow is long when longer than the real body |
+| ShadowVeryLong | `talib.ShadowVeryLong` | 0 | 2.0 | Shadow is very long when longer than 2x the real body |
+| ShadowShort | `talib.ShadowShort` | 10 | 1.0 | Shadow is short when shorter than half the average shadow sum |
+| ShadowVeryShort | `talib.ShadowVeryShort` | 10 | 0.1 | Shadow is very short when shorter than 10% of the average high-low range |
+
+**Distance settings:**
+
+| Setting | Option prefix | N | alpha | Rule |
+|:--------|:-------------|--:|------:|:-----|
+| Near | `talib.Near` | 5 | 0.2 | Distance is "near" when <= 20% of the average high-low range |
+| Far | `talib.Far` | 5 | 0.6 | Distance is "far" when >= 60% of the average high-low range |
+| Equal | `talib.Equal` | 5 | 0.05 | Distance is "equal" when <= 5% of the average high-low range |
+
+### Effect of lookback (`N`)
+
+Changing `N` alters how many prior candles form the reference average. A shorter lookback makes the reference more reactive to recent price action:
+
+```{r}
+## default N = 10
+sum(abs(talib::doji(talib::BTC)), na.rm = TRUE)
+```
+
+```{r}
+## shorter lookback
+options(talib.BodyDoji.N = 3)
+sum(abs(talib::doji(talib::BTC)), na.rm = TRUE)
+```
+
+```{r, include = FALSE}
+options(talib.BodyDoji.N = 10)
+```
+
+### Effect of sensitivity (`alpha`)
+
+Changing `alpha` makes the classification more or less permissive. A higher `alpha` means a wider acceptance threshold:
+
+```{r}
+## default alpha = 0.1
+sum(abs(talib::doji(talib::BTC)), na.rm = TRUE)
+```
+
+```{r}
+## more permissive: accept bodies up to 20% of the high-low range
+options(talib.BodyDoji.alpha = 0.2)
+sum(abs(talib::doji(talib::BTC)), na.rm = TRUE)
+```
+
+```{r, include = FALSE}
+## restore default
+options(talib.BodyDoji.alpha = 0.1)
+```
+
+The default `alpha = 0.1` for BodyDoji means: "the real body is doji-like when it's shorter than 10% of the average high-low range over the past 10 candles." Doubling it to `0.2` loosens the criterion and identifies more patterns.
+
+### Which settings affect which patterns?
+
+Different patterns depend on different settings. As a general rule:
+
+- **Doji patterns** (`doji()`, `doji_star()`, `dragonfly_doji()`, `gravestone_doji()`, `long_legged_doji()`, `rickshaw_man()`) are primarily controlled by `BodyDoji`.
+- **Engulfing-style patterns** (`engulfing()`, `harami()`, `dark_cloud_cover()`, `piercing()`) depend on `BodyLong` and `BodyShort`.
+- **Star patterns** (`morning_star()`, `evening_star()`, `abandoned_baby()`) depend on `BodyShort`, `BodyLong`, and the shadow settings.
+- **Hammer/Shooting Star** (`hammer()`, `shooting_star()`, `inverted_hammer()`, `hanging_man()`) primarily depend on `ShadowLong` and `BodyShort`.
+- **Distance-based comparisons** (`kicking()`, `matching_low()`, `counter_attack()`) use the `Near`, `Far`, and `Equal` settings.
+
+## Charting patterns
+
+Candlestick patterns integrate with the [{talib}](https://github.com/serkor1/ta-lib-R/) charting system. Bullish patterns are marked below the candle, bearish patterns above, and direction-neutral patterns use a neutral style:
+
+```{r}
+{
+	talib::chart(talib::BTC)
+	talib::indicator(talib::doji)
+	talib::indicator(talib::engulfing)
+}
+```
+
+Multiple patterns can be layered on the same chart. Each call to `indicator()` adds its markers to the existing price chart.
+
+## Contributing and bug reports
+
+The underlying library, [TA-Lib](https://github.com/TA-Lib/ta-lib), is a long-standing and well-known library but this R wrapper is still in its early stage. All contributions, suggestions, and bug reports are welcome.
