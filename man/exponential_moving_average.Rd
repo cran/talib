@@ -5,7 +5,7 @@
 \alias{EMA}
 \title{Exponential Moving Average}
 \usage{
-exponential_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+exponential_moving_average(x, cols, n = 30, na.bridge = FALSE, ...)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.

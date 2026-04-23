@@ -5,7 +5,15 @@
 \alias{MAMA}
 \title{MESA Adaptive Moving Average}
 \usage{
-mesa_adaptive_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+mesa_adaptive_moving_average(
+  x,
+  cols,
+  n = 30,
+  fast = 0.5,
+  slow = 0.05,
+  na.bridge = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.
@@ -16,6 +24,10 @@ Defaults to \code{~close}.}
 
 \item{n}{(\link{integer}). Lookback period (window size). A positive \link{integer}
 of \link{length} 1.}
+
+\item{fast}{(\link{double}). Upper limit of the adaptive smoothing factor (alpha) used in the MESA algorithm. A \link{double} in \verb{[0.01, 0.99]}. \code{0.5} by default.}
+
+\item{slow}{(\link{double}). Lower limit of the adaptive smoothing factor (alpha) used in the MESA algorithm. A \link{double} in \verb{[0.01, 0.99]}. \code{0.05} by default.}
 
 \item{na.bridge}{(\link{logical}). A \link{logical} of \link{length} 1. \link{FALSE} by
 default. When \link{FALSE}, input \code{NA}s propagate through the TA-Lib C
@@ -33,6 +45,7 @@ An object of same \link{class} and \link{length} of \code{x}:
 
 \describe{
 \item{MAMA}{\link{double}}
+\item{FAMA}{\link{double}}
 }
 }
 \description{

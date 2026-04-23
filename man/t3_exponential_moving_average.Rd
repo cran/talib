@@ -5,7 +5,14 @@
 \alias{T3}
 \title{Triple Exponential Moving Average (T3)}
 \usage{
-t3_exponential_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+t3_exponential_moving_average(
+  x,
+  cols,
+  n = 5,
+  vfactor = 0.7,
+  na.bridge = FALSE,
+  ...
+)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.
@@ -16,6 +23,8 @@ Defaults to \code{~close}.}
 
 \item{n}{(\link{integer}). Lookback period (window size). A positive \link{integer}
 of \link{length} 1.}
+
+\item{vfactor}{(\link{double}). Volume Factor controlling the smoothing weight of the T3 curve. A \link{double} in \verb{[0, 1]}: \code{0} collapses T3 to a standard triple EMA, larger values shift the curve closer to a DEMA. \code{0.7} by default, following Tillson (1998).}
 
 \item{na.bridge}{(\link{logical}). A \link{logical} of \link{length} 1. \link{FALSE} by
 default. When \link{FALSE}, input \code{NA}s propagate through the TA-Lib C

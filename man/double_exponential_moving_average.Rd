@@ -5,7 +5,7 @@
 \alias{DEMA}
 \title{Double Exponential Moving Average}
 \usage{
-double_exponential_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+double_exponential_moving_average(x, cols, n = 30, na.bridge = FALSE, ...)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.

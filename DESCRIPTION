@@ -1,7 +1,7 @@
 Package: talib
 Title: Interface to 'TA-Lib' for Technical Analysis and Candlestick
         Patterns
-Version: 0.9-0
+Version: 0.9-1
 Authors@R: c(
     person(
       given   = "Serkan",
@@ -17,12 +17,12 @@ Authors@R: c(
       comment = "Copyright holder of the bundled TA-Lib C library (src/ta-lib/)"
     )
   )
-Description: Interface to the 'TA-Lib' (Technical Analysis Library) C
+Description: Interface to the 'TA-Lib' (Technical Analysis Library) 'C'
     library, providing access to 150+ indicators (e.g. Average Directional
     Movement Index (ADX), Moving Average Convergence Divergence (MACD),
     Relative Strength Index (RSI), Stochastic Oscillator, Bollinger Bands),
     candlestick pattern recognition, and rolling-window utilities. Core
-    computations are implemented in C for fast Open-High-Low-Close-Volume
+    computations are implemented in 'C' for fast Open-High-Low-Close-Volume
     (OHLCV) time-series feature engineering and rule-based signal
     generation, with optional interactive visualization via 'plotly'.
 X-schema.org-keywords: technical analysis, TA-Lib, technical
@@ -44,11 +44,11 @@ VignetteBuilder: knitr
 URL: https://serkor1.github.io/ta-lib-R/,
         https://github.com/serkor1/ta-lib-R, https://ta-lib.org/
 BugReports: https://github.com/serkor1/ta-lib-R/issues
-Packaged: 2026-04-18 23:45:39 UTC; serkor
+Packaged: 2026-04-23 13:54:16 UTC; serkor
 Author: Serkan Korkmaz [cre, aut, cph] (ORCID:
     <https://orcid.org/0000-0002-5052-0982>),
   Mario Fortier [cph] (Copyright holder of the bundled TA-Lib C library
     (src/ta-lib/))
 Maintainer: Serkan Korkmaz <serkor1@duck.com>
 Repository: CRAN
-Date/Publication: 2026-04-21 19:50:02 UTC
+Date/Publication: 2026-04-23 14:40:10 UTC

@@ -5,7 +5,7 @@
 \alias{SMA}
 \title{Simple Moving Average}
 \usage{
-simple_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+simple_moving_average(x, cols, n = 30, na.bridge = FALSE, ...)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.

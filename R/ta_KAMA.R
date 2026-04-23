@@ -8,6 +8,9 @@
 #' @templateVar .family Overlap Study
 #' @templateVar .formula ~close
 #'
+## splice:documentation:start
+## splice:documentation:end
+#'
 #' @details
 #' When passed without 'x', [kaufman_adaptive_moving_average] functions as an 'Moving Average'-specification which is used in, for example, [stochastic] when constructing the smoothing lines.
 #'
@@ -19,7 +22,7 @@
 kaufman_adaptive_moving_average <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -29,12 +32,10 @@ kaufman_adaptive_moving_average <- function(
 		## construct Moving Average specification
 		## from call
 		x <- structure(
-			{
-				list(
-					n = if (missing(n)) 10L else as.integer(n),
-					maType = 6L
-				)
-			}
+			list(
+				n = if (missing(n)) 30L else as.integer(n),
+				maType = 6L
+			)
 		)
 
 		return(x)
@@ -56,7 +57,7 @@ KAMA <- kaufman_adaptive_moving_average
 kaufman_adaptive_moving_average.default <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -82,10 +83,9 @@ kaufman_adaptive_moving_average.default <- function(
 	## calculate indicator and
 	## return as data.frame
 	x <- .Call(
-		C_impl_ta_MA,
+		C_impl_ta_KAMA,
 		as.double(constructed_series[[1]]),
 		as.integer(n),
-		6L,
 		as.logical(na.bridge)
 	)
 
@@ -103,7 +103,7 @@ kaufman_adaptive_moving_average.default <- function(
 kaufman_adaptive_moving_average.data.frame <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -119,7 +119,7 @@ kaufman_adaptive_moving_average.data.frame <- function(
 kaufman_adaptive_moving_average.matrix <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -142,7 +142,7 @@ kaufman_adaptive_moving_average.matrix <- function(
 kaufman_adaptive_moving_average.numeric <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -157,16 +157,23 @@ kaufman_adaptive_moving_average.numeric <- function(
 	## pass to 'C' directly
 	## with the input vector
 	x <- .Call(
-		C_impl_ta_MA,
+		C_impl_ta_KAMA,
 		as.double(x),
 		as.integer(n),
-		6L,
 		as.logical(na.bridge)
 	)
 
-	## 'C' returns a named matrix
-	## return the first column
-	x <- as.double(x)
+	## check if it has 'dims'
+	## and convert to double if
+	## not to honor the 'type-safety'-esque
+	## approach
+	##
+	## NOTE: this adds a few ns overhead but
+	##       its a robust alternative to code it
+	##       manually. Any suggestions are welcome
+	if (is.null(dim(x))) {
+		x <- as.double(x)
+	}
 
 	x
 }
@@ -178,7 +185,7 @@ kaufman_adaptive_moving_average.numeric <- function(
 kaufman_adaptive_moving_average.plotly <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -231,7 +238,7 @@ kaufman_adaptive_moving_average.plotly <- function(
 				)
 			)
 		),
-		name = sprintf("KAMA(%d)", n),
+		name = label("KAMA", n),
 		decorators = list()
 	)
 	state[["main"]] <- plotly_object
@@ -247,7 +254,7 @@ kaufman_adaptive_moving_average.plotly <- function(
 kaufman_adaptive_moving_average.ggplot <- function(
 	x,
 	cols,
-	n = 10,
+	n = 30,
 	na.bridge = FALSE,
 	...
 ) {
@@ -293,7 +300,7 @@ kaufman_adaptive_moving_average.ggplot <- function(
 				y = "KAMA"
 			)
 		),
-		name = sprintf("KAMA(%d)", n),
+		name = label("KAMA", n),
 		decorators = list(),
 		data = constructed_indicator
 	)

@@ -5,7 +5,7 @@
 \alias{KAMA}
 \title{Kaufman Adaptive Moving Average}
 \usage{
-kaufman_adaptive_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+kaufman_adaptive_moving_average(x, cols, n = 30, na.bridge = FALSE, ...)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.

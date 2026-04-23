@@ -9,7 +9,6 @@ stochastic_relative_strength_index(
   x,
   cols,
   n = 14,
-  n_rsi = 14,
   fastk = 5,
   fastd = SMA(n = 3),
   na.bridge = FALSE,
@@ -17,15 +16,14 @@ stochastic_relative_strength_index(
 )
 }
 \arguments{
-\item{x}{An OHLC-V series coercible to \link{data.frame}.}
+\item{x}{An OHLC-V series coercible to \link{data.frame}.
+Alternatively, \code{x} may also be supplied as a \link{double} vector.}
 
-\item{cols}{(\link{formula}). An optional \code{3}-variable \link{formula} selecting columns from \code{x} via \link{model.frame}.
-Defaults to \code{~high + low + close}.}
+\item{cols}{(\link{formula}). An optional \code{1}-variable \link{formula} selecting columns from \code{x} via \link{model.frame}.
+Defaults to \code{~close}.}
 
 \item{n}{(\link{integer}). Lookback period (window size). A positive \link{integer}
 of \link{length} 1.}
-
-\item{n_rsi}{(\link{integer}). Period for the \link{relative_strength_index}.}
 
 \item{fastk}{(\link{integer}). Period for the fast-k line.}
 
@@ -54,6 +52,8 @@ An object of same \link{class} and \link{length} of \code{x}:
 \code{stochastic_relative_strength_index()} is a generic S3 function that preserves
 the input \link{class}: \link{data.frame} in, \link{data.frame} out; \link{matrix} in,
 \link{matrix} out.
+
+\code{stochastic_relative_strength_index()} also accepts a \link{double} vector, in which case the indicator is calculated directly without column selection. When the result has a single column it is simplified to a \link{double} vector; otherwise the full \code{n} by \code{k} \link{matrix} is returned.
 \subsection{Handling of \code{NA} values}{
 
 Every indicator always emits \strong{leading \code{NA}s} for the initial

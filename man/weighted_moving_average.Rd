@@ -5,7 +5,7 @@
 \alias{WMA}
 \title{Weighted Moving Average}
 \usage{
-weighted_moving_average(x, cols, n = 10, na.bridge = FALSE, ...)
+weighted_moving_average(x, cols, n = 30, na.bridge = FALSE, ...)
 }
 \arguments{
 \item{x}{An OHLC-V series coercible to \link{data.frame}.

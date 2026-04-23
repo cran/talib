@@ -8,9 +8,9 @@
 extended_moving_average_convergence_divergence(
   x,
   cols,
-  fast = EMA(n = 12),
-  slow = EMA(n = 26),
-  signal = EMA(n = 9),
+  fast = SMA(n = 12),
+  slow = SMA(n = 26),
+  signal = SMA(n = 9),
   na.bridge = FALSE,
   ...
 )
