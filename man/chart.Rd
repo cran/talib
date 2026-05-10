@@ -135,10 +135,10 @@ talib::chart()
 \code{\link[=indicator]{indicator()}} to attach technical indicators, \code{\link[=set_theme]{set_theme()}} to
 customize chart colors.
 
-Other Charting: 
+Other Charting:
 \code{\link{chart_themes}},
-\code{\link{indicator}()},
-\code{\link{set_theme}()}
+\code{\link[=indicator]{indicator()}},
+\code{\link[=set_theme]{set_theme()}}
 }
 \author{
 Serkan Korkmaz

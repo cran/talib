@@ -4,10 +4,9 @@
 \alias{chart_themes}
 \title{Chart Themes}
 \description{
-The charting system ships with a set of built-in color themes inspired by
-\href{https://chartthemes.com/}{chartthemes.com}. Each theme controls candle
-colors, background, text, grid lines, and a 10-color palette (colorway)
-used to distinguish indicator lines.
+The charting system ships with a set of built-in color themes. Each
+theme controls candle colors, background, text, grid lines, and a
+10-color palette (colorway) used to distinguish indicator lines.
 
 Use \code{\link[=set_theme]{set_theme()}} to apply or list themes.
 }
@@ -123,9 +122,9 @@ figures and presentations that are friendly to colorblind people.}
 \url{https://jfly.uni-koeln.de/color/}
 }
 \seealso{
-Other Charting: 
-\code{\link{chart}()},
-\code{\link{indicator}()},
-\code{\link{set_theme}()}
+Other Charting:
+\code{\link[=chart]{chart()}},
+\code{\link[=indicator]{indicator()}},
+\code{\link[=set_theme]{set_theme()}}
 }
 \concept{Charting}
