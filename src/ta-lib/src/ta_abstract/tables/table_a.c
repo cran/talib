@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,26 +38,87 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
+/* AC BEGIN */
+static const TA_OptInputParameterInfo TA_DEF_UI_D_AC_FastPeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInFastPeriod",
+   0,
 
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
+   "Fast Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   5,
+   "Period of the fast MA",
+
+   NULL
+};
+
+static const TA_OptInputParameterInfo TA_DEF_UI_D_AC_SlowPeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInSlowPeriod",
+   0,
+
+   "Slow Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   34,
+   "Period of the slow MA",
+
+   NULL
+};
+
+static const TA_OptInputParameterInfo TA_DEF_UI_D_AC_SignalPeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInSignalPeriod",
+   0,
+
+   "Signal Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   5,
+   "Smoothing for the signal line (period length)",
+
+   NULL
+};
+
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AC_Default =
+                               { TA_Output_Real, "outReal", TA_OUT_HISTO };
+
+static const TA_InputParameterInfo    *TA_AC_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_HL,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_AC_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real_AC_Default,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_AC_OptInputs[] =
+{ &TA_DEF_UI_D_AC_FastPeriod,
+  &TA_DEF_UI_D_AC_SlowPeriod,
+  &TA_DEF_UI_D_AC_SignalPeriod,
+  NULL
+};
+
+DEF_FUNCTION( AC,
+              TA_GroupId_MomentumIndicators,
+              "Accelerator/Decelerator Oscillator",
+              TA_FUNC_FLG_STREAM
+             );
+/* AC END */
 
 /* ACCBANDS BEGIN */
-
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_Middle =
-                               { TA_Output_Real, "outRealMiddleBand", TA_OUT_LINE };
-
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_Upper =
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_UpperBand =
                                { TA_Output_Real, "outRealUpperBand", TA_OUT_UPPER_LIMIT };
 
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_Lower =
-                                { TA_Output_Real, "outRealLowerBand", TA_OUT_LOWER_LIMIT };
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_MiddleBand =
+                               { TA_Output_Real, "outRealMiddleBand", TA_OUT_LINE };
+
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_ACCBANDS_LowerBand =
+                               { TA_Output_Real, "outRealLowerBand", TA_OUT_LOWER_LIMIT };
 
 static const TA_InputParameterInfo    *TA_ACCBANDS_Inputs[]    =
 {
@@ -67,9 +128,9 @@ static const TA_InputParameterInfo    *TA_ACCBANDS_Inputs[]    =
 
 static const TA_OutputParameterInfo   *TA_ACCBANDS_Outputs[]   =
 {
-  &TA_DEF_UI_Output_Real_ACCBANDS_Upper,
-  &TA_DEF_UI_Output_Real_ACCBANDS_Middle,
-  &TA_DEF_UI_Output_Real_ACCBANDS_Lower,
+  &TA_DEF_UI_Output_Real_ACCBANDS_UpperBand,
+  &TA_DEF_UI_Output_Real_ACCBANDS_MiddleBand,
+  &TA_DEF_UI_Output_Real_ACCBANDS_LowerBand,
   NULL
 };
 
@@ -78,17 +139,34 @@ static const TA_OptInputParameterInfo *TA_ACCBANDS_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ACCBANDS,                    /* name */
-              TA_GroupId_OverlapStudies,   /* groupId */
-              "Acceleration Bands",        /* hint */
-              "Accbands",                  /* CamelCase name */
-              TA_FUNC_FLG_OVERLAP          /* flags */
+DEF_FUNCTION( ACCBANDS,
+              TA_GroupId_OverlapStudies,
+              "Acceleration Bands",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM
              );
 /* ACCBANDS END */
 
-
 /* ACOS BEGIN */
-DEF_MATH_UNARY_OPERATOR( ACOS, "Vector Trigonometric ACos", "Acos" )
+static const TA_InputParameterInfo    *TA_ACOS_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_ACOS_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_ACOS_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( ACOS,
+              TA_GroupId_MathTransform,
+              "Vector Trigonometric ACos",
+              TA_FUNC_FLG_STREAM | TA_FUNC_FLG_NAN_INF_OUT
+             );
 /* ACOS END */
 
 /* AD BEGIN */
@@ -105,49 +183,66 @@ static const TA_OutputParameterInfo   *TA_AD_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_AD_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( AD,                         /* name */
-              TA_GroupId_VolumeIndicators,   /* groupId */
-              "Chaikin A/D Line", /* hint */
-              "Ad",                         /* CamelCase name */
-              0                             /* flags */
+DEF_FUNCTION( AD,
+              TA_GroupId_VolumeIndicators,
+              "Chaikin A/D Line",
+              TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PATH_DEP
              );
 /* AD END */
 
 /* ADD BEGIN */
-DEF_MATH_BINARY_OPERATOR( ADD, "Vector Arithmetic Add", "Add" )
+static const TA_InputParameterInfo    *TA_ADD_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real0,
+  &TA_DEF_UI_Input_Real1,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_ADD_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_ADD_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( ADD,
+              TA_GroupId_MathOperators,
+              "Vector Arithmetic Add",
+              TA_FUNC_FLG_STREAM
+             );
 /* ADD END */
 
 /* ADOSC BEGIN */
-static const TA_OptInputParameterInfo TA_DEF_UI_FastADOSC_Period =
+static const TA_OptInputParameterInfo TA_DEF_UI_D_ADOSC_FastPeriod =
 {
-   TA_OptInput_IntegerRange, /* type */
-   "optInFastPeriod",        /* paramName */
-   0,                        /* flags */
+   TA_OptInput_IntegerRange,
+   "optInFastPeriod",
+   0,
 
-   "Fast Period",            /* displayName */
-   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
-   3, /* defaultValue */
-   "Number of period for the fast MA", /* hint */
+   "Fast Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   3,
+   "Period of the fast MA",
 
-   NULL /* CamelCase name */
+   NULL
 };
 
-static const TA_OptInputParameterInfo TA_DEF_UI_SlowADOSC_Period =
+static const TA_OptInputParameterInfo TA_DEF_UI_D_ADOSC_SlowPeriod =
 {
-   TA_OptInput_IntegerRange, /* type */
-   "optInSlowPeriod",        /* paramName */
-   0,                        /* flags */
+   TA_OptInput_IntegerRange,
+   "optInSlowPeriod",
+   0,
 
-   "Slow Period",            /* displayName */
-   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2, /* dataSet */
-   10, /* defaultValue */
-   "Number of period for the slow MA", /* hint */
+   "Slow Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   10,
+   "Period of the slow MA",
 
-   NULL /* CamelCase name */
+   NULL
 };
 
 static const TA_InputParameterInfo    *TA_ADOSC_Inputs[]    =
@@ -163,17 +258,15 @@ static const TA_OutputParameterInfo   *TA_ADOSC_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_ADOSC_OptInputs[] =
-{
-  &TA_DEF_UI_FastADOSC_Period,
-  &TA_DEF_UI_SlowADOSC_Period,
+{ &TA_DEF_UI_D_ADOSC_FastPeriod,
+  &TA_DEF_UI_D_ADOSC_SlowPeriod,
   NULL
 };
 
-DEF_FUNCTION( ADOSC,                         /* name */
-              TA_GroupId_VolumeIndicators,   /* groupId */
-              "Chaikin A/D Oscillator", /* hint */
-              "AdOsc",                  /* CamelCase name */
-              0                         /* flags */
+DEF_FUNCTION( ADOSC,
+              TA_GroupId_VolumeIndicators,
+              "Chaikin A/D Oscillator",
+              TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PATH_DEP
              );
 /* ADOSC END */
 
@@ -195,11 +288,10 @@ static const TA_OptInputParameterInfo *TA_ADX_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ADX,                          /* name */
-              TA_GroupId_MomentumIndicators,   /* groupId */
-              "Average Directional Movement Index", /* hint */
-              "Adx",                         /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER          /* flags */
+DEF_FUNCTION( ADX,
+              TA_GroupId_MomentumIndicators,
+              "Average Directional Movement Index",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* ADX END */
 
@@ -221,16 +313,86 @@ static const TA_OptInputParameterInfo *TA_ADXR_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ADXR,                         /* name */
-              TA_GroupId_MomentumIndicators,   /* groupId */
-              "Average Directional Movement Index Rating", /* hint */
-			  "Adxr",                      /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER          /* flags */
+DEF_FUNCTION( ADXR,
+              TA_GroupId_MomentumIndicators,
+              "Average Directional Movement Index Rating",
+              TA_FUNC_FLG_STREAM
              );
 /* ADXR END */
 
+/* AO BEGIN */
+static const TA_OptInputParameterInfo TA_DEF_UI_D_AO_FastPeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInFastPeriod",
+   0,
+
+   "Fast Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   5,
+   "Period of the fast MA",
+
+   NULL
+};
+
+static const TA_OptInputParameterInfo TA_DEF_UI_D_AO_SlowPeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInSlowPeriod",
+   0,
+
+   "Slow Period",
+   (const void *)&TA_DEF_TimePeriod_Positive_Minimum2,
+   34,
+   "Period of the slow MA",
+
+   NULL
+};
+
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AO_Default =
+                               { TA_Output_Real, "outReal", TA_OUT_HISTO };
+
+static const TA_InputParameterInfo    *TA_AO_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_HL,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_AO_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real_AO_Default,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_AO_OptInputs[] =
+{ &TA_DEF_UI_D_AO_FastPeriod,
+  &TA_DEF_UI_D_AO_SlowPeriod,
+  NULL
+};
+
+DEF_FUNCTION( AO,
+              TA_GroupId_MomentumIndicators,
+              "Awesome Oscillator",
+              TA_FUNC_FLG_STREAM
+             );
+/* AO END */
+
 /* APO BEGIN */
-static const TA_InputParameterInfo *TA_APO_Inputs[] =
+const TA_OptInputParameterInfo TA_DEF_UI_D_APO_MAType =
+{
+   TA_OptInput_IntegerList,
+   "optInMAType",
+   0,
+
+   "MA Type",
+   (const void *)&TA_MA_TypeList,
+   1,
+   "Type of Moving Average",
+
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_APO_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
   NULL
@@ -245,24 +407,23 @@ static const TA_OutputParameterInfo   *TA_APO_Outputs[]   =
 static const TA_OptInputParameterInfo *TA_APO_OptInputs[] =
 { &TA_DEF_UI_Fast_Period,
   &TA_DEF_UI_Slow_Period,
-  &TA_DEF_UI_MA_Method,
+  &TA_DEF_UI_D_APO_MAType,
   NULL
 };
 
-DEF_FUNCTION( APO,                         /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Absolute Price Oscillator", /* hint */
-              "Apo",                       /* CamelCase name */
-              0                            /* flags */
+DEF_FUNCTION( APO,
+              TA_GroupId_MomentumIndicators,
+              "Absolute Price Oscillator",
+              TA_FUNC_FLG_STREAM
              );
 /* APO END */
 
 /* AROON BEGIN */
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AroonUp =
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AROON_outAroonDown =
                                { TA_Output_Real, "outAroonDown", TA_OUT_DASH_LINE };
 
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AroonDown =
-                                { TA_Output_Real, "outAroonUp", TA_OUT_LINE };
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_AROON_outAroonUp =
+                               { TA_Output_Real, "outAroonUp", TA_OUT_LINE };
 
 static const TA_InputParameterInfo    *TA_AROON_Inputs[]    =
 {
@@ -272,24 +433,21 @@ static const TA_InputParameterInfo    *TA_AROON_Inputs[]    =
 
 static const TA_OutputParameterInfo   *TA_AROON_Outputs[]   =
 {
-  &TA_DEF_UI_Output_Real_AroonUp,
-  &TA_DEF_UI_Output_Real_AroonDown,
+  &TA_DEF_UI_Output_Real_AROON_outAroonDown,
+  &TA_DEF_UI_Output_Real_AROON_outAroonUp,
   NULL
 };
 
 static const TA_OptInputParameterInfo *TA_AROON_OptInputs[] =
-{
-  &TA_DEF_UI_TimePeriod_14_MINIMUM2,
+{ &TA_DEF_UI_TimePeriod_14_MINIMUM2,
   NULL
 };
 
-DEF_FUNCTION( AROON,                          /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Aroon",                        /* hint */
-              "Aroon",                        /* CamelCase name */
-              0                               /* flags */
+DEF_FUNCTION( AROON,
+              TA_GroupId_MomentumIndicators,
+              "Aroon",
+              TA_FUNC_FLG_STREAM
              );
-
 /* AROON END */
 
 /* AROONOSC BEGIN */
@@ -306,26 +464,61 @@ static const TA_OutputParameterInfo   *TA_AROONOSC_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_AROONOSC_OptInputs[] =
-{
-  &TA_DEF_UI_TimePeriod_14_MINIMUM2,
+{ &TA_DEF_UI_TimePeriod_14_MINIMUM2,
   NULL
 };
 
-DEF_FUNCTION( AROONOSC,                       /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Aroon Oscillator",             /* hint */
-			  "AroonOsc",                     /* CamelCase name */
-              0                               /* flags */
+DEF_FUNCTION( AROONOSC,
+              TA_GroupId_MomentumIndicators,
+              "Aroon Oscillator",
+              TA_FUNC_FLG_STREAM
              );
-
 /* AROONOSC END */
 
 /* ASIN BEGIN */
-DEF_MATH_UNARY_OPERATOR( ASIN, "Vector Trigonometric ASin", "Asin" )
+static const TA_InputParameterInfo    *TA_ASIN_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_ASIN_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_ASIN_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( ASIN,
+              TA_GroupId_MathTransform,
+              "Vector Trigonometric ASin",
+              TA_FUNC_FLG_STREAM | TA_FUNC_FLG_NAN_INF_OUT
+             );
 /* ASIN END */
 
 /* ATAN BEGIN */
-DEF_MATH_UNARY_OPERATOR( ATAN, "Vector Trigonometric ATan", "Atan" )
+static const TA_InputParameterInfo    *TA_ATAN_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_ATAN_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_ATAN_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( ATAN,
+              TA_GroupId_MathTransform,
+              "Vector Trigonometric ATan",
+              TA_FUNC_FLG_STREAM
+             );
 /* ATAN END */
 
 /* ATR BEGIN */
@@ -346,13 +539,37 @@ static const TA_OptInputParameterInfo *TA_ATR_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ATR,                        /* name */
-              TA_GroupId_VolatilityIndicators, /* groupId */
-              "Average True Range",       /* hint */
-              "Atr",                      /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER        /* flags */
+DEF_FUNCTION( ATR,
+              TA_GroupId_VolatilityIndicators,
+              "Average True Range",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* ATR END */
+
+/* AVGDEV BEGIN */
+static const TA_InputParameterInfo    *TA_AVGDEV_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_AVGDEV_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_AVGDEV_OptInputs[] =
+{ &TA_DEF_UI_TimePeriod_14_MINIMUM2,
+  NULL
+};
+
+DEF_FUNCTION( AVGDEV,
+              TA_GroupId_PriceTransform,
+              "Average Deviation",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM
+             );
+/* AVGDEV END */
 
 /* AVGPRICE BEGIN */
 static const TA_InputParameterInfo    *TA_AVGPRICE_Inputs[]    =
@@ -367,42 +584,15 @@ static const TA_OutputParameterInfo   *TA_AVGPRICE_Outputs[]   =
   NULL
 };
 
-static const TA_OptInputParameterInfo *TA_AVGPRICE_OptInputs[] = { NULL };
+static const TA_OptInputParameterInfo *TA_AVGPRICE_OptInputs[] =
+{ NULL };
 
-DEF_FUNCTION( AVGPRICE,                   /* name */
-              TA_GroupId_PriceTransform,  /* groupId */
-              "Average Price",            /* hint */
-              "AvgPrice",                 /* CamelCase name */
-              TA_FUNC_FLG_OVERLAP         /* flags */
+DEF_FUNCTION( AVGPRICE,
+              TA_GroupId_PriceTransform,
+              "Average Price",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM
              );
 /* AVGPRICE END */
-
-/* AVGDEV BEGIN */
-static const TA_InputParameterInfo *TA_AVGDEV_Inputs[] =
-{
-	&TA_DEF_UI_Input_Real,
-	NULL
-};
-
-static const TA_OutputParameterInfo *TA_AVGDEV_Outputs[] =
-{
-	&TA_DEF_UI_Output_Real,
-	NULL
-};
-
-static const TA_OptInputParameterInfo *TA_AVGDEV_OptInputs[] =
-{
-	&TA_DEF_UI_TimePeriod_14_MINIMUM2,
-	NULL
-};
-
-DEF_FUNCTION( AVGDEV,                      /* name */
-				TA_GroupId_PriceTransform, /* groupId*/
-				"Average Deviation",       /* hint */
-				"AvgDev",                  /* CamelCase name*/
-				TA_FUNC_FLG_OVERLAP        /* flags */
-				);
-/* AVGDEV END */
 
 /****************************************************************************
  * Step 2 - Add your TA function to the table.
@@ -410,6 +600,7 @@ DEF_FUNCTION( AVGDEV,                      /* name */
  ****************************************************************************/
 const TA_FuncDef *TA_DEF_TableA[] =
 {
+   ADD_TO_TABLE(AC),
    ADD_TO_TABLE(ACCBANDS),
    ADD_TO_TABLE(ACOS),
    ADD_TO_TABLE(AD),
@@ -417,14 +608,15 @@ const TA_FuncDef *TA_DEF_TableA[] =
    ADD_TO_TABLE(ADOSC),
    ADD_TO_TABLE(ADX),
    ADD_TO_TABLE(ADXR),
+   ADD_TO_TABLE(AO),
    ADD_TO_TABLE(APO),
    ADD_TO_TABLE(AROON),
    ADD_TO_TABLE(AROONOSC),
    ADD_TO_TABLE(ASIN),
    ADD_TO_TABLE(ATAN),
    ADD_TO_TABLE(ATR),
-   ADD_TO_TABLE(AVGPRICE),
    ADD_TO_TABLE(AVGDEV),
+   ADD_TO_TABLE(AVGPRICE),
    NULL
 };
 
@@ -433,9 +625,3 @@ const TA_FuncDef *TA_DEF_TableA[] =
 const unsigned int TA_DEF_TableASize =
               ((sizeof(TA_DEF_TableA)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

@@ -80,6 +80,7 @@ typedef enum
   TA_TESTUTIL_DRT_DATA_DIFF_INT         = 162,
   TA_TESTUTIL_DRT_OUT_OF_BOUND_OUT      = 163,
   TA_TESTUTIL_DRT_OUT_OF_BOUND_OUT_INT  = 164,
+  TA_TESTUTIL_DRT_STABILITY_MISMATCH    = 165,
 
   /* Error code for test in test_period.c */
   TA_PERIOD_HISTORYALLOC_FAILED               = 200,
@@ -223,6 +224,13 @@ typedef enum
   TA_ABS_TST_FAIL_STARTEND_ZERO         = 617,
   TA_ABS_TST_FAIL_FUNCTION_DESC_SMALL   = 618,
   TA_ABS_TST_FAIL_FUNCTION_DESC_LARGE   = 619,
+  TA_ABS_TST_FAIL_OUTPUT_ALIAS          = 620,
+  TA_ABS_TST_FAIL_INPLACE_ALIAS         = 621,
+  TA_ABS_TST_FAIL_INPLACE_ALIAS_VACUOUS = 622,
+  TA_ABS_TST_FAIL_HOLDER_CONTRACT       = 623,
+  TA_ABS_TST_FAIL_HOLDER_CONTRACT_VACUOUS = 624,
+  TA_ABS_TST_FAIL_INDEX_RANGE           = 625,
+  TA_ABS_TST_FAIL_HOLDER_NOT_REUSABLE   = 626,
 
   /* Error code related to internal tests. */
   TA_INTERNAL_CIRC_BUFF_FAIL_0      = 700,
@@ -237,6 +245,31 @@ typedef enum
   TA_INTERNAL_TIMESTAMP_TEST_FAILED = 709,
   TA_INTERNAL_PSEUDORANDOM_UINT32   = 710,
   TA_INTERNAL_PSEUDORANDOM_DOUBLE   = 711,
+  TA_INTERNAL_APPEND_FAIL_0         = 712,
+  TA_INTERNAL_APPEND_FAIL_1         = 713,
+  TA_INTERNAL_APPEND_FAIL_2         = 714,
+  TA_INTERNAL_APPEND_FAIL_3         = 715,
+  TA_INTERNAL_APPEND_FAIL_4         = 716,
+  TA_INTERNAL_APPEND_FAIL_5         = 717,
+  TA_INTERNAL_APPEND_FAIL_6         = 718,
+  TA_INTERNAL_APPEND_FAIL_7         = 719,
+  TA_INTERNAL_APPEND_FAIL_8         = 720,
+  TA_INTERNAL_APPEND_VACUOUS        = 721,
+  TA_INTERNAL_UNST_BOUND_FAIL_0     = 722,
+  TA_INTERNAL_UNST_BOUND_FAIL_1     = 723,
+  TA_INTERNAL_UNST_BOUND_FAIL_2     = 724,
+  TA_INTERNAL_UNST_BOUND_FAIL_3     = 725,
+  TA_INTERNAL_ENUM_CONTRACT_FAIL_0  = 726,
+  TA_INTERNAL_ENUM_CONTRACT_FAIL_1  = 727,
+  TA_INTERNAL_ENUM_CONTRACT_FAIL_2  = 728,
+  TA_INTERNAL_ENUM_CONTRACT_FAIL_3  = 729,
+  TA_INTERNAL_UNST_VALUE_FAIL       = 730,
+  TA_INTERNAL_CANDLE_BOUND_FAIL_0   = 731,
+  TA_INTERNAL_CANDLE_BOUND_FAIL_1   = 732,
+  TA_INTERNAL_CANDLE_BOUND_FAIL_2   = 733,
+  TA_INTERNAL_CANDLE_BOUND_FAIL_3   = 734,
+  TA_INTERNAL_CANDLE_BOUND_FAIL_4   = 735,
+  TA_INTERNAL_CANDLE_VACUOUS        = 736,
 
   /* Error code related to CSI data source tests. */
   TA_CSI_ADDDATASOURCE_FAILED    = 800,
@@ -262,6 +295,8 @@ typedef enum
   TA_TSTCDL_CALLFUNC_FAIL        = 907,
   TA_TSTCDL_GETLOOKBACK_FAIL     = 908,
   TA_TSTCDL_PARAMHOLDERFREE_FAIL = 909,
+  TA_TSTCDL_PREDICATE_MISMATCH   = 910,
+  TA_TSTCDL_PREDICATE_VACUOUS    = 911,
    
   /* Error code related to test_merge */
   TA_TSTMERGE_AC_ADDFAILED_1          = 1000,
@@ -291,6 +326,153 @@ typedef enum
   TA_TEST_FAIL_BUG1359452_3  = 2003,
   TA_TEST_FAIL_BUG1359452_4  = 2004,
   TA_TEST_FAIL_BUG1359452_5  = 2005,
+
+  /* Error code related to codegen verification tests. */
+  TA_CODEGEN_PIPE_OPEN_FAILED        = 1100,
+  TA_CODEGEN_PIPE_FORK_FAILED        = 1101,
+  TA_CODEGEN_PIPE_WRITE_FAILED       = 1102,
+  TA_CODEGEN_PIPE_READ_FAILED        = 1103,
+  TA_CODEGEN_PIPE_READ_TIMEOUT       = 1104,
+  TA_CODEGEN_RETCODE_MISMATCH        = 1105,
+  TA_CODEGEN_BEGIDX_MISMATCH         = 1106,
+  TA_CODEGEN_NBELEMENT_MISMATCH      = 1107,
+  TA_CODEGEN_OUTPUT_MISMATCH         = 1108,
+  TA_CODEGEN_JSON_PARSE_FAILED       = 1109,
+  TA_CODEGEN_ALLOC_FAILED            = 1110,
+  TA_CODEGEN_STREAM_MISMATCH         = 1111,
+  TA_CODEGEN_PIPE_SERVER_NOT_FOUND   = 1112,
+  TA_CODEGEN_SUBSET_GATE_UNAVAILABLE = 1113,
+  TA_CODEGEN_SWEEP_VACUOUS           = 1114,
+  TA_CODEGEN_RANGE_VACUOUS           = 1115,
+
+  /* Abstract codegen test errors */
+  TA_ABSTRACT_LOOKBACK_MISMATCH      = 1200,
+  TA_ABSTRACT_FOR_EACH_MISMATCH      = 1201,
+  TA_ABSTRACT_CALL_MISMATCH          = 1202,
+  TA_ABSTRACT_SERVER_ERROR           = 1203,
+
+  /* Server verify errors (server_verify.c) */
+  TA_SV_RETCODE_MISMATCH             = 1300,
+  TA_SV_BEGIDX_MISMATCH              = 1301,
+  TA_SV_NBELEMENT_MISMATCH           = 1302,
+  TA_SV_OUTPUT_MISMATCH              = 1303,
+  TA_SV_LOOKBACK_PARITY_MISMATCH     = 1304,  /* issue #256: one server's own
+                                                  lookback tier disagrees with its
+                                                  own batch tier */
+
+  /* Single-precision (TA_S_) vector-arithmetic overflow guard (PR #33) */
+  TA_S_OVERFLOW_BAD_RETCODE          = 1400,
+  TA_S_OVERFLOW_NOT_FINITE           = 1401,
+  TA_S_OVERFLOW_WRONG_VALUE          = 1402,
+
+  /* MFI epsilon-vs-zero misclassification (issue #107) */
+  TA_MFI_EPSILON_ISSUE107_BAD_RETCODE = 1500,
+  TA_MFI_EPSILON_ISSUE107_BAD_RANGE   = 1501,
+  TA_MFI_EPSILON_ISSUE107_WRONG_VALUE = 1502,
+
+  /* STOCH/STOCHF divide-by-near-zero blowup (issue #107 / STOCHRSI) */
+  TA_STOCH_EPSILON_ISSUE107_BAD_RETCODE = 1510,
+  TA_STOCH_EPSILON_ISSUE107_BAD_RANGE   = 1511,
+  TA_STOCH_EPSILON_ISSUE107_WRONG_VALUE = 1512,
+
+  /* Cross-language boolean-builtin (IS_ZERO family) parity */
+  TA_PREDICATE_PARITY_CALL_FAILED  = 1520,
+  TA_PREDICATE_PARITY_MISMATCH     = 1521,
+
+  /* Cross-language set_unstable_period wildcard (#144) */
+  TA_UNSTABLE_WILDCARD_CALL_FAILED = 1530,
+  TA_UNSTABLE_WILDCARD_MISMATCH    = 1531,
+  TA_UNSTABLE_WILDCARD_VACUOUS     = 1532,
+  TA_UNSTABLE_BOUND_CEILING        = 1533,
+  TA_UNSTABLE_BOUND_NOT_REJECTED   = 1534,
+  TA_UNSTABLE_BOUND_WROTE_ANYWAY   = 1535,
+
+  /* Cross-language TA_MAX_INDEX bound (#180) */
+  TA_INDEX_RANGE_XLANG_CALL_FAILED = 1540,
+  TA_INDEX_RANGE_XLANG_MISMATCH    = 1541,
+
+  /* Rolling extremum block scan vs a naive window scan (issue #147). */
+  TA_REGTEST_ROLLING_EXTREMUM_CALL    = 1550,
+  TA_REGTEST_ROLLING_EXTREMUM_BEGIDX  = 1551,
+  TA_REGTEST_ROLLING_EXTREMUM_NBELEM  = 1552,
+  TA_REGTEST_ROLLING_EXTREMUM_VALUE   = 1553,
+  TA_REGTEST_ROLLING_EXTREMUM_INPLACE = 1554,
+  TA_REGTEST_ROLLING_EXTREMUM_VACUOUS = 1555,
+
+  /* Frozen v0.6.4 reference values (issue #188). Note none of these is a
+   * multiple of 256: main() returns the ErrorNumber and POSIX truncates the
+   * exit status to its low 8 bits, so 1536/1792/... would exit 0. */
+  TA_REGTEST_LEGACY_UNKNOWN_FUNC     = 1560,
+  TA_REGTEST_LEGACY_PARAM_MISMATCH   = 1561,
+  TA_REGTEST_LEGACY_TOO_MANY_OUTPUTS = 1562,
+  TA_REGTEST_LEGACY_ALLOC_FAILED     = 1563,
+  TA_REGTEST_LEGACY_BAD_RETCODE      = 1564,
+  TA_REGTEST_LEGACY_BAD_SHAPE        = 1565,
+  TA_REGTEST_LEGACY_BAD_SAMPLE       = 1566,
+  TA_REGTEST_LEGACY_BAD_VALUE        = 1567,
+  TA_REGTEST_LEGACY_DEAD_TOL         = 1568,
+  TA_REGTEST_LEGACY_BAD_HISTORY      = 1569,
+  TA_REGTEST_LEGACY_VACUOUS          = 1570,
+
+  /* Candlestick settings matrix, C-side and cross-language (#215/#216). */
+  TA_CDLSET_SETTING_REJECTED         = 1580,
+  TA_CDLSET_CALL_FAILED              = 1581,
+  TA_CDLSET_RESTORE_FAILED           = 1582,
+  TA_CDLSET_XLANG_MISMATCH           = 1583,
+  TA_CDLSET_VACUOUS_NO_MOVE          = 1584,
+  TA_CDLSET_VACUOUS_NO_SYNC          = 1585,
+  TA_CDLSET_NOT_RESTORED             = 1586,
+
+  /* Streaming non-finite input rejection (the boundary contract). */
+  TA_STREAM_FINITE_BAR_ACCEPTED      = 1591,
+  TA_STREAM_FINITE_STATE_MOVED       = 1592,
+  TA_STREAM_FINITE_PARAM_ACCEPTED    = 1593,
+  TA_STREAM_FINITE_SETUP_FAILED      = 1594,
+  TA_STREAM_FINITE_VACUOUS           = 1595,
+
+  /* Streaming short-history rejection (rule S7 / TA_INSUFFICIENT_HISTORY). */
+  TA_STREAM_SHORT_HISTORY_WRONG_CODE = 1596,
+  TA_STREAM_SHORT_HISTORY_ACCEPTED   = 1597,
+  TA_STREAM_SHORT_HISTORY_CONTROL    = 1598,
+  TA_STREAM_SHORT_HISTORY_VACUOUS    = 1599,
+
+  /* Streaming empty-history rejection (rule S1 / TA_OUT_OF_RANGE_START_INDEX). */
+  TA_STREAM_EMPTY_HISTORY_WRONG_CODE = 1607,
+  TA_STREAM_EMPTY_HISTORY_VACUOUS    = 1608,
+
+  /* Streaming UpdateAndFill: n bars in one call, and its partial commit. */
+  TA_STREAM_UFILL_ACCEPTED_BAD_BAR   = 1601,
+  TA_STREAM_UFILL_WRONG_COMMIT       = 1602,
+  TA_STREAM_UFILL_VALUE_MISMATCH     = 1603,
+  TA_STREAM_UFILL_WROTE_PAST_COMMIT  = 1604,
+  TA_STREAM_UFILL_SETUP_FAILED       = 1605,
+  TA_STREAM_UFILL_VACUOUS            = 1606,
+
+  /* DIV's documented zero-divisor result (issue #249). */
+  TA_DIVZERO_BAD_RETCODE             = 1610,
+  TA_DIVZERO_BAD_SHAPE               = 1611,
+  TA_DIVZERO_BAD_VALUE               = 1612,
+  TA_DIVZERO_FLAG_MISSING            = 1613,
+  TA_DIVZERO_VACUOUS                 = 1614,
+
+  /* Quote-unit (power-of-two rescale) invariance, corpus-wide (#253). */
+  TA_QUOTE_UNIT_NOT_INVARIANT        = 1620,
+  TA_QUOTE_UNIT_NO_DEGREE            = 1621,
+  TA_QUOTE_UNIT_SHAPE_MOVED          = 1622,
+  TA_QUOTE_UNIT_CALL_FAILED          = 1623,
+  TA_QUOTE_UNIT_OUT_OF_RANGE         = 1624,
+  TA_QUOTE_UNIT_VACUOUS              = 1625,
+
+  /* Batch tier rule B4: a required argument was not supplied. */
+  TA_BATCH_ARG_WRONG_CODE            = 1630,
+  TA_BATCH_ARG_CONTROL               = 1631,
+  TA_BATCH_ARG_VACUOUS               = 1632,
+  /* Rule B6a: declining a nullable output changed what the call produced. */
+  TA_BATCH_ARG_NULLABLE_DIVERGED     = 1633,
+
+  /* --function= named something no test group covers, on a run that had
+   * nothing else to do. Reported rather than passed silently. */
+  TA_REGTEST_FILTER_MATCHED_NOTHING  = 1600,
 
   TA_LAST_VALID_ERROR = 0xFFFF
 } ErrorNumber;

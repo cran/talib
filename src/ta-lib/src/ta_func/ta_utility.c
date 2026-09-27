@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -44,91 +44,112 @@
  *  -------------------------------------------------------------------
  *  052603 MF     Adapt code to compile with .NET Managed C++
  *  123004 RM,MF  Adapt code to work with Visual Studio 2005
+ *  071926 MF,CC  Remove dead .NET/Java preprocessor branches (plain C only)
+ *  072726 MF,CC  Bound TA_Set/GetUnstablePeriod below as well as above (#144)
+ *  072826 MF,CC  Range-check against TA_FUNC_UNST_COUNT; ALL is now INT_MAX
+ *  082126 MF,CC  TA_StreamOutRange: the range every stream handle carries (#241)
  *
  */
 
-#if defined( _MANAGED )
-   #using <mscorlib.dll>
-   #include "TA-Lib-Core.h"
-   #include "ta_memory.h"
-namespace TicTacTec { namespace TA { namespace Library {
-#else
-   #include "ta_utility.h"
-   #include "ta_func.h"
-   #include "ta_memory.h"
-#endif
+#include <string.h>
 
-#if defined( _MANAGED )
- enum class Core::RetCode Core::SetUnstablePeriod(  enum class FuncUnstId id,
-                                                    unsigned int unstablePeriod )
-#else
+#include "ta_utility.h"
+#include "ta_func.h"
+#include "ta_memory.h"
+#include "ta_func_stream_private.h"
+
 TA_RetCode TA_SetUnstablePeriod( TA_FuncUnstId id,
                                  unsigned int  unstablePeriod )
-#endif
 {
    int i;
 
-   if( id > ENUM_VALUE(FuncUnstId,TA_FUNC_UNST_ALL,FuncUnstAll) )
-      return ENUM_VALUE(RetCode,TA_BAD_PARAM,BadParam);
+   /* The wildcard is INT_MAX, far above every id, so it is tested by value and
+    * everything else must land inside the table. The unsigned compare wraps a
+    * negative id past the count instead of indexing behind the array -- an
+    * out-of-bounds write onto the adjacent TA_Globals->compatibility (#144) --
+    * and stays correct whether the compiler gives the enum a signed or unsigned
+    * underlying type (any width up to unsigned int).
+    */
+   if( id != TA_FUNC_UNST_ALL &&
+       (unsigned int)id >= (unsigned int)TA_FUNC_UNST_COUNT )
+      return TA_BAD_PARAM;
 
-   if( id == ENUM_VALUE(FuncUnstId,TA_FUNC_UNST_ALL,FuncUnstAll) )
+   /* The period is added to a lookback which is then used as an index, so an
+    * unbounded one overflows that lookback NEGATIVE and the function indexes
+    * far past the end of its input. TA_MAX_INDEX is the ceiling the index space
+    * already enforces on startIdx/endIdx; a warm-up longer than the largest
+    * addressable series could never produce output, so nothing legitimate is
+    * refused. Guarding here rather than in each lookback keeps the invariant in
+    * one place -- every unstable-period function derives its lookback from this
+    * value.
+    */
+   if( unstablePeriod > (unsigned int)TA_MAX_INDEX )
+      return TA_BAD_PARAM;
+
+   if( id == TA_FUNC_UNST_ALL )
    {
-      for( i=0; i < (int)ENUM_VALUE(FuncUnstId,TA_FUNC_UNST_ALL,FuncUnstAll); i++ )
+      for( i=0; i < TA_FUNC_UNST_COUNT; i++ )
 	  {
-         #if defined( _MANAGED )
-            Globals->unstablePeriod[(int)i] = unstablePeriod;
-         #else
-            TA_Globals->unstablePeriod[i] = unstablePeriod;
-         #endif
+         TA_Globals->unstablePeriod[i] = unstablePeriod;
 	  }
    }
    else
    {
-         #if defined( _MANAGED )
-            Globals->unstablePeriod[(int)id] = unstablePeriod;
-         #else
-            TA_Globals->unstablePeriod[id] = unstablePeriod;
-         #endif
+      TA_Globals->unstablePeriod[id] = unstablePeriod;
    }
 
-   return ENUM_VALUE(RetCode,TA_SUCCESS,Success);
+   return TA_SUCCESS;
 }
 
-#if defined( _MANAGED )
-unsigned int Core::GetUnstablePeriod( enum class FuncUnstId id )
-#else
 unsigned int TA_GetUnstablePeriod( TA_FuncUnstId id )
-#endif
 {
-   if( id >= ENUM_VALUE(FuncUnstId,TA_FUNC_UNST_ALL,FuncUnstAll) )
+   /* Unsigned compare -- see TA_SetUnstablePeriod above. The wildcard names no
+    * single function, so it and any out-of-range id read as 0 rather than off
+    * the end of the array.
+    */
+   if( (unsigned int)id >= (unsigned int)TA_FUNC_UNST_COUNT )
 	   return 0;
 
-   #if defined( _MANAGED )
-      return Globals->unstablePeriod[(int)id];
-   #else
-      return TA_Globals->unstablePeriod[id];
-   #endif
+   return TA_Globals->unstablePeriod[id];
 }
 
-#if defined( _MANAGED )
- enum class Core::RetCode Core::SetCompatibility(  enum class Compatibility value )
-#else
 TA_RetCode TA_SetCompatibility( TA_Compatibility value )
-#endif
 {
+   /* Reject a value outside the enum rather than latching it. Without this the
+    * setter accepted anything and the getter echoed it back, so a caller had no
+    * way to tell a typo from a setting (open item 10 of
+    * docs/error-handling-spec.md). The function is deprecated; this is the whole
+    * fix, not a step toward a larger one.
+    */
+   if( value != TA_COMPATIBILITY_DEFAULT && value != TA_COMPATIBILITY_METASTOCK )
+      return TA_BAD_PARAM;
+
    TA_GLOBALS_COMPATIBILITY = value;
-   return ENUM_VALUE(RetCode,TA_SUCCESS,Success);
+   return TA_SUCCESS;
 }
 
-#if defined( _MANAGED )
- enum class Core::Compatibility Core::GetCompatibility( void )
-#else
 TA_Compatibility TA_GetCompatibility( void )
-#endif
 {
    return TA_GLOBALS_COMPATIBILITY;
 }
 
-#if defined( _MANAGED )
-}}} // Close namespace TicTacTec::TA::Lib
-#endif
+TA_RetCode TA_StreamOutRange( const void *stream,
+                              int *outBegIdx,
+                              int *outNBElement )
+{
+   /* Every generated TA_<N>_Stream leads with TA_StreamRangeHead's two members,
+    * in its order — the C stream backend emits both from one field list. The
+    * structs themselves are private to the translation unit that defines them,
+    * so this reads the head out by object representation rather than through a
+    * type the caller could not name anyway.
+    */
+   TA_StreamRangeHead head;
+
+   if( !stream || !outBegIdx || !outNBElement )
+      return TA_BAD_PARAM;
+
+   memcpy( &head, stream, sizeof(head) );
+   *outBegIdx = head.outRangeBegIdx;
+   *outNBElement = head.outRangeCount;
+   return TA_SUCCESS;
+}

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,16 +38,6 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
-
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
-
 /* PLUS_DI BEGIN */
 static const TA_InputParameterInfo    *TA_PLUS_DI_Inputs[]    =
 {
@@ -66,13 +56,11 @@ static const TA_OptInputParameterInfo *TA_PLUS_DI_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( PLUS_DI,                     /* name */
-              TA_GroupId_MomentumIndicators,   /* groupId */
-              "Plus Directional Indicator", /* hint */
-              "PlusDI",                     /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER          /* flags */
+DEF_FUNCTION( PLUS_DI,
+              TA_GroupId_MomentumIndicators,
+              "Plus Directional Indicator",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
-
 /* PLUS_DI END */
 
 /* PLUS_DM BEGIN */
@@ -93,17 +81,29 @@ static const TA_OptInputParameterInfo *TA_PLUS_DM_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( PLUS_DM,                       /* name */
-              TA_GroupId_MomentumIndicators, /* groupId */
-              "Plus Directional Movement",   /* hint */
-              "PlusDM",                      /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER           /* flags */
+DEF_FUNCTION( PLUS_DM,
+              TA_GroupId_MomentumIndicators,
+              "Plus Directional Movement",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
-
 /* PLUS_DM END */
 
 /* PPO BEGIN */
-static const TA_InputParameterInfo *TA_PPO_Inputs[] =
+const TA_OptInputParameterInfo TA_DEF_UI_D_PPO_MAType =
+{
+   TA_OptInput_IntegerList,
+   "optInMAType",
+   0,
+
+   "MA Type",
+   (const void *)&TA_MA_TypeList,
+   1,
+   "Type of Moving Average",
+
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_PPO_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
   NULL
@@ -118,20 +118,17 @@ static const TA_OutputParameterInfo   *TA_PPO_Outputs[]   =
 static const TA_OptInputParameterInfo *TA_PPO_OptInputs[] =
 { &TA_DEF_UI_Fast_Period,
   &TA_DEF_UI_Slow_Period,
-  &TA_DEF_UI_MA_Method,
+  &TA_DEF_UI_D_PPO_MAType,
   NULL
 };
 
-DEF_FUNCTION( PPO,                           /* name */
-              TA_GroupId_MomentumIndicators, /* groupId */
-              "Percentage Price Oscillator", /* hint */
-              "Ppo",                         /* CamelCase name */
-              0                              /* flags */
+DEF_FUNCTION( PPO,
+              TA_GroupId_MomentumIndicators,
+              "Percentage Price Oscillator",
+              TA_FUNC_FLG_STREAM
              );
 /* PPO END */
 
-#if 0
-Will be implemented later
 /* PVI BEGIN */
 static const TA_InputParameterInfo    *TA_PVI_Inputs[]    =
 {
@@ -146,19 +143,55 @@ static const TA_OutputParameterInfo   *TA_PVI_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_PVI_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( PVI,
+              TA_GroupId_VolumeIndicators,
+              "Positive Volume Index",
+              TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PATH_DEP
+             );
+/* PVI END */
+
+/* PVO BEGIN */
+const TA_OptInputParameterInfo TA_DEF_UI_D_PVO_MAType =
 {
+   TA_OptInput_IntegerList,
+   "optInMAType",
+   0,
+
+   "MA Type",
+   (const void *)&TA_MA_TypeList,
+   1,
+   "Type of Moving Average",
+
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_PVO_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_V,
   NULL
 };
 
-DEF_FUNCTION( PVI,                         /* name */
-              TA_GroupId_VolumeIndicators, /* groupId */
-              "Positive Volume Index",     /* hint */
-              "Pvi",                       /* CamelCase name */
-              0                            /* flags */
-             );
+static const TA_OutputParameterInfo   *TA_PVO_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
 
-/* PVI END */
-#endif
+static const TA_OptInputParameterInfo *TA_PVO_OptInputs[] =
+{ &TA_DEF_UI_Fast_Period,
+  &TA_DEF_UI_Slow_Period,
+  &TA_DEF_UI_D_PVO_MAType,
+  NULL
+};
+
+DEF_FUNCTION( PVO,
+              TA_GroupId_VolumeIndicators,
+              "Percentage Volume Oscillator",
+              TA_FUNC_FLG_STREAM
+             );
+/* PVO END */
 
 /****************************************************************************
  * Step 2 - Add your TA function to the table.
@@ -169,7 +202,8 @@ const TA_FuncDef *TA_DEF_TableP[] =
    ADD_TO_TABLE(PLUS_DI),
    ADD_TO_TABLE(PLUS_DM),
    ADD_TO_TABLE(PPO),
-   /* ADD_TO_TABLE(PVI),*/
+   ADD_TO_TABLE(PVI),
+   ADD_TO_TABLE(PVO),
    NULL
 };
 
@@ -178,9 +212,3 @@ const TA_FuncDef *TA_DEF_TableP[] =
 const unsigned int TA_DEF_TablePSize =
               ((sizeof(TA_DEF_TableP)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

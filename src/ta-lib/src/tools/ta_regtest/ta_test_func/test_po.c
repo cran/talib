@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -59,6 +59,7 @@
 #include "ta_test_priv.h"
 #include "ta_test_func.h"
 #include "ta_utility.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -103,6 +104,10 @@ typedef struct
 /**** Local functions declarations.    ****/
 static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test );
+
+static ErrorNumber test_default_is_ema( const TA_History *history,
+                                        const char *funcName,
+                                        int doPercentage );
 
 /**** Local variables definitions.     ****/
 static TA_Test tableTest[] =
@@ -158,7 +163,12 @@ static TA_Test tableTest[] =
    /*    PPO TEST - SIMPLE - CLASSIC */
    /**********************************/
    { 1, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_DEFAULT, TA_SUCCESS,   0,  1.10264, 2,  252-2 }, /* First Value */
-   { 0, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_DEFAULT, TA_SUCCESS,   1, -0.02813, 2,  252-2 },
+   /* Was -0.02813 (#188). Closes 94.815 / 94.375 / 95.095 give SMA2 = 94.735 and
+    * SMA3 = 94.7616666..., so (SMA2-SMA3)/SMA3*100 = -0.0281407742230402. A
+    * search over percentage-oscillator variants (/slow, /fast, /mean, absolute)
+    * across period pairs and bars finds nothing yielding -0.02813. PPO over SMA
+    * has no compatibility dependence, so the METASTOCK row below is identical. */
+   { 0, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_DEFAULT, TA_SUCCESS,   1, -0.0281407742, 2,  252-2 },
    { 0, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_DEFAULT, TA_SUCCESS, 249, -0.21191, 2,  252-2 }, /* Last Value */
 
    { 0, 1, 0,   1, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_DEFAULT, TA_SUCCESS,   0,        0,   0,  0 }, /* Out of range value */
@@ -170,7 +180,7 @@ static TA_Test tableTest[] =
    /*    PPO TEST - SIMPLE - METASTOCK */
    /************************************/
    { 0, 1, 0, 251, 3, 2, TA_MAType_SMA, TA_COMPATIBILITY_METASTOCK, TA_SUCCESS,   0,  1.10264, 2,  252-2 }, /* First Value */
-   { 0, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_METASTOCK, TA_SUCCESS,   1, -0.02813, 2,  252-2 },
+   { 0, 1, 0, 251, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_METASTOCK, TA_SUCCESS,   1, -0.0281407742, 2,  252-2 },   /* see #188 note above */
    { 0, 1, 0, 251, 3, 2, TA_MAType_SMA, TA_COMPATIBILITY_METASTOCK, TA_SUCCESS, 249, -0.21191, 2,  252-2 }, /* Last Value */
 
    { 0, 1, 0,   1, 2, 3, TA_MAType_SMA, TA_COMPATIBILITY_METASTOCK, TA_SUCCESS,   0,        0,   0,  0 }, /* Out of range value */
@@ -234,6 +244,17 @@ ErrorNumber test_func_po( TA_History *history )
          return retValue;
       }
    }
+
+   /* Issue #120: PPO and APO default optInMAType to EMA (Gerald Appel's
+    * original PPO/MACD definition), not SMA. Lock that in.
+    */
+   retValue = test_default_is_ema( history, "PPO", 1 );
+   if( retValue != 0 )
+      return retValue;
+
+   retValue = test_default_is_ema( history, "APO", 0 );
+   if( retValue != 0 )
+      return retValue;
 
    /* All test succeed. */
    return TA_TEST_PASS;
@@ -359,6 +380,19 @@ static ErrorNumber do_test( const TA_History *history,
    if( errNb != TA_TEST_PASS )
       return errNb;
 
+   if( server_verify_active() )
+   {
+      const char *funcName = test->doPercentage ? "PPO" : "APO";
+      errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                            retCode, outBegIdx, outNbElement,
+                            (const TA_Real*[]){ gBuffer[0].in, NULL },
+                            (double[]){ (double)test->optInFastPeriod,
+                                        (double)test->optInSlowPeriod,
+                                        (double)test->optInMethod_2 }, 3,
+                            (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -391,9 +425,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -428,11 +459,168 @@ static ErrorNumber do_test( const TA_History *history,
       else
       {
          errNb = doRangeTest( rangeTestFunction,
-                              TA_FUNC_UNST_NONE,
+                              TA_TEST_UNST_NONE,
                               (void *)&testParam, 1, 0 );
          if( errNb != TA_TEST_PASS )
             return errNb;
       }
+   }
+
+   return TA_TEST_PASS;
+}
+
+/* Issue #120 regression: verify that PPO/APO's optInMAType defaults to EMA.
+ *
+ * Three independent checks (mirrors test_pvo_default_is_ema in test_composite.c):
+ *   (a) the ta_abstract declared default value is TA_MAType_EMA;
+ *   (b) driving the function through ta_abstract while leaving optInMAType at
+ *       its allocator-initialized default produces the SAME output (bit-exact)
+ *       as an explicit EMA call — and, thanks to a vacuity guard, NOT the SMA
+ *       one; and
+ *   (c) calling the guarded C function directly with TA_INTEGER_DEFAULT for
+ *       optInMAType (the sentinel-substitution path) also yields EMA.
+ * Sabotage-proven: flipping the yaml default back to 0 fails (a)/(b) via the
+ * abstract default, and (c) via the C sentinel substitution.
+ */
+#define PO_OUT_CAP 300   /* > nbBars (252) */
+static ErrorNumber test_default_is_ema( const TA_History *history,
+                                        const char *funcName,
+                                        int doPercentage )
+{
+   const TA_FuncHandle *handle;
+   const TA_FuncInfo   *funcInfo;
+   TA_ParamHolder      *paramHolder;
+   TA_RetCode           rc;
+   TA_Integer           emaBeg, emaNb, smaBeg, smaNb, defBeg, defNb, senBeg, senNb;
+   static TA_Real       emaOut[PO_OUT_CAP], smaOut[PO_OUT_CAP], defOut[PO_OUT_CAP];
+   static TA_Real       senOut[PO_OUT_CAP];
+   int                  endIdx = (int)history->nbBars - 1;
+   int                  maTypeIdx = -1;
+   int                  maTypeFound = 0;
+   unsigned int         i;
+
+   /* Deterministic global state: EMA has an unstable period; pin it to 0 so the
+    * explicit-EMA and default-MAType calls are directly comparable. */
+   TA_SetCompatibility( TA_COMPATIBILITY_DEFAULT );
+   TA_SetUnstablePeriod( TA_FUNC_UNST_EMA, 0 );
+
+   /* (a) Declared default: the MAType optional input defaults to EMA. */
+   if( TA_GetFuncHandle( funcName, &handle ) != TA_SUCCESS ||
+       TA_GetFuncInfo( handle, &funcInfo ) != TA_SUCCESS )
+   {
+      printf( "%s default Fail: cannot get func handle/info\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_PARAM;
+   }
+   for( i = 0; i < funcInfo->nbOptInput; i++ )
+   {
+      const TA_OptInputParameterInfo *optInfo;
+      TA_GetOptInputParameterInfo( handle, i, &optInfo );
+      if( optInfo->paramName && strstr( optInfo->paramName, "MAType" ) )
+      {
+         maTypeFound = 1;
+         maTypeIdx = (int)i;
+         if( (int)optInfo->defaultValue != (int)TA_MAType_EMA )
+         {
+            printf( "%s default Fail: optInMAType default = %d, expected EMA (%d)\n",
+                    funcName, (int)optInfo->defaultValue, (int)TA_MAType_EMA );
+            return TA_TESTUTIL_TFRR_BAD_CALCULATION;
+         }
+      }
+   }
+   if( !maTypeFound )
+   {
+      printf( "%s default Fail: no MAType optional input found\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_PARAM;
+   }
+   /* (b) below leaves optInMAType unset by NOT calling its setter; that relies
+    * on it being optional input index 2 (after fast/slow period). Guard it. */
+   if( maTypeIdx != 2 )
+   {
+      printf( "%s default Fail: optInMAType is opt-input %d, expected 2\n",
+              funcName, maTypeIdx );
+      return TA_TESTUTIL_TFRR_BAD_PARAM;
+   }
+
+   /* Explicit EMA and SMA references. They MUST differ, or (b) proves nothing. */
+   if( doPercentage )
+   {
+      if( TA_PPO( 0, endIdx, history->close, 12, 26, TA_MAType_EMA, &emaBeg, &emaNb, emaOut ) != TA_SUCCESS ||
+          TA_PPO( 0, endIdx, history->close, 12, 26, TA_MAType_SMA, &smaBeg, &smaNb, smaOut ) != TA_SUCCESS )
+      {
+         printf( "%s default Fail: explicit TA_PPO call failed\n", funcName );
+         return TA_TESTUTIL_TFRR_BAD_RETCODE;
+      }
+   }
+   else
+   {
+      if( TA_APO( 0, endIdx, history->close, 12, 26, TA_MAType_EMA, &emaBeg, &emaNb, emaOut ) != TA_SUCCESS ||
+          TA_APO( 0, endIdx, history->close, 12, 26, TA_MAType_SMA, &smaBeg, &smaNb, smaOut ) != TA_SUCCESS )
+      {
+         printf( "%s default Fail: explicit TA_APO call failed\n", funcName );
+         return TA_TESTUTIL_TFRR_BAD_RETCODE;
+      }
+   }
+   if( emaNb != smaNb ||
+       memcmp( emaOut, smaOut, (size_t)emaNb * sizeof(TA_Real) ) == 0 )
+   {
+      printf( "%s default Fail: EMA and SMA outputs identical — test would be vacuous\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_CALCULATION;
+   }
+
+   /* (b) Behavioural: drive the function through ta_abstract setting only the
+    * fast+slow periods, leaving optInMAType at its allocator-initialized
+    * default; the result must be the EMA one (bit-exact) — hence NOT SMA. */
+   if( TA_ParamHolderAlloc( handle, &paramHolder ) != TA_SUCCESS )
+   {
+      printf( "%s default Fail: TA_ParamHolderAlloc failed\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_PARAM;
+   }
+   if( TA_SetInputParamRealPtr( paramHolder, 0, history->close ) != TA_SUCCESS ||
+       TA_SetOptInputParamInteger( paramHolder, 0, 12 ) != TA_SUCCESS ||  /* optInFastPeriod */
+       TA_SetOptInputParamInteger( paramHolder, 1, 26 ) != TA_SUCCESS ||  /* optInSlowPeriod */
+       /* optInMAType (index maTypeIdx) is deliberately NOT set -> uses the default. */
+       TA_SetOutputParamRealPtr( paramHolder, 0, defOut ) != TA_SUCCESS )
+   {
+      printf( "%s default Fail: abstract param setup failed\n", funcName );
+      TA_ParamHolderFree( paramHolder );
+      return TA_TESTUTIL_TFRR_BAD_PARAM;
+   }
+   rc = TA_CallFunc( paramHolder, 0, endIdx, &defBeg, &defNb );
+   TA_ParamHolderFree( paramHolder );
+   if( rc != TA_SUCCESS )
+   {
+      printf( "%s default Fail: TA_CallFunc (default MAType) rc=%d\n", funcName, (int)rc );
+      return TA_TESTUTIL_TFRR_BAD_CALCULATION;
+   }
+   if( defBeg != emaBeg || defNb != emaNb ||
+       memcmp( defOut, emaOut, (size_t)defNb * sizeof(TA_Real) ) != 0 )
+   {
+      printf( "%s default Fail: default-MAType output != explicit EMA "
+              "(the default is not EMA)\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_CALCULATION;
+   }
+
+   /* (c) C-level default sentinel: calling the guarded function directly with
+    * TA_INTEGER_DEFAULT for optInMAType substitutes the default (the
+    * `if(optInMAType==TA_INTEGER_DEFAULT) optInMAType=<default>` line), which
+    * must now be EMA — bit-exact with the explicit EMA reference. */
+   if( doPercentage )
+      rc = TA_PPO( 0, endIdx, history->close, 12, 26,
+                   (TA_MAType)TA_INTEGER_DEFAULT, &senBeg, &senNb, senOut );
+   else
+      rc = TA_APO( 0, endIdx, history->close, 12, 26,
+                   (TA_MAType)TA_INTEGER_DEFAULT, &senBeg, &senNb, senOut );
+   if( rc != TA_SUCCESS )
+   {
+      printf( "%s default Fail: TA_INTEGER_DEFAULT MAType call rc=%d\n", funcName, (int)rc );
+      return TA_TESTUTIL_TFRR_BAD_CALCULATION;
+   }
+   if( senBeg != emaBeg || senNb != emaNb ||
+       memcmp( senOut, emaOut, (size_t)senNb * sizeof(TA_Real) ) != 0 )
+   {
+      printf( "%s default Fail: TA_INTEGER_DEFAULT-MAType output != explicit EMA "
+              "(the C-level default is not EMA)\n", funcName );
+      return TA_TESTUTIL_TFRR_BAD_CALCULATION;
    }
 
    return TA_TEST_PASS;

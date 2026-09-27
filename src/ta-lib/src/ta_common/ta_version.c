@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -34,14 +34,21 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+/* Pull in TA_LIB_API so the TA_GetVersion* functions are annotated with
+ * __declspec(dllexport) on Windows. Without this include the definitions are
+ * compiled without the export attribute and are absent from ta-lib.dll while
+ * still present on Linux/macOS (see issue #57).
+ */
+#include "ta_common.h"
+
 /* Package versioning.
  *
  * Must match the VERSION file in the TA-Lib repos root dir.
  *
  */
 #define MAJOR "0"
-#define MINOR "6"
-#define PATCH "4"
+#define MINOR "8"
+#define PATCH "1"
 
 /* Deprecated: Use PATCH instead. */
 #define BUILD PATCH

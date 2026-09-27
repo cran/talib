@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,16 +38,6 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
-
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
-
 /* VAR BEGIN */
 static const TA_InputParameterInfo    *TA_VAR_Inputs[]    =
 {
@@ -67,13 +57,61 @@ static const TA_OptInputParameterInfo *TA_VAR_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( VAR,                      /* name */
-              TA_GroupId_Statistic,     /* groupId */
-              "Variance",               /* hint */
-              "Variance",               /* CamelCase name */
-              0                         /* flags */
+DEF_FUNCTION( VAR,
+              TA_GroupId_Statistic,
+              "Variance",
+              TA_FUNC_FLG_STREAM
              );
 /* VAR END */
+
+/* VWAP BEGIN */
+static const TA_InputParameterInfo    *TA_VWAP_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_HLCV,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_VWAP_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_VWAP_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( VWAP,
+              TA_GroupId_VolumeIndicators,
+              "Volume Weighted Average Price",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PATH_DEP
+             );
+/* VWAP END */
+
+/* VWMA BEGIN */
+static const TA_InputParameterInfo    *TA_VWMA_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  &TA_DEF_UI_Input_Price_V,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_VWMA_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_VWMA_OptInputs[] =
+{ &TA_DEF_UI_TimePeriod_30,
+  NULL
+};
+
+DEF_FUNCTION( VWMA,
+              TA_GroupId_OverlapStudies,
+              "Volume Weighted Moving Average",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM | TA_FUNC_FLG_NAN_INF_OUT | TA_FUNC_FLG_PERIOD1_IDENTITY
+             );
+/* VWMA END */
 
 /****************************************************************************
  * Step 2 - Add your TA function to the table.
@@ -82,6 +120,8 @@ DEF_FUNCTION( VAR,                      /* name */
 const TA_FuncDef *TA_DEF_TableV[] =
 {
    ADD_TO_TABLE(VAR),
+   ADD_TO_TABLE(VWAP),
+   ADD_TO_TABLE(VWMA),
    NULL
 };
 
@@ -90,9 +130,3 @@ const TA_FuncDef *TA_DEF_TableV[] =
 const unsigned int TA_DEF_TableVSize =
               ((sizeof(TA_DEF_TableV)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

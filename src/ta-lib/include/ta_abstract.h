@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -80,7 +80,7 @@ extern "C" {
  *
  * The abstract interface is used within TA-Lib to perform at least
  * the following:
- *   - used by gen_code to generate all the glue code.
+ *   - used by ta_codegen to generate all the glue code.
  *   - used to generate a XML representation of the TA functions.
  */
 
@@ -174,6 +174,11 @@ TA_LIB_API TA_RetCode TA_GetFuncHandle( const char *name,
  */
 typedef int TA_FuncFlags;
 #define TA_FUNC_FLG_OVERLAP   0x01000000 /* Output scale same as input data. */
+#define TA_FUNC_FLG_STREAM    0x02000000 /* Function also has a streaming API:
+                                          * TA_<FUNC>_Open/Update/Peek/Close,
+                                          * incremental per-bar evaluation
+                                          * bit-identical to the batch function.
+                                          */
 #define TA_FUNC_FLG_VOLUME    0x04000000 /* Output shall be over the volume data. */
 #define TA_FUNC_FLG_UNST_PER  0x08000000 /* Indicate if this function have an unstable
                                           * initial period. Some additional code exist
@@ -181,6 +186,59 @@ typedef int TA_FuncFlags;
                                           * unstable period. See Documentation.
                                           */
 #define TA_FUNC_FLG_CANDLESTICK 0x10000000 /* Output shall be a candlestick */
+#define TA_FUNC_FLG_PATH_DEP  0x20000000 /* Output value is path-dependent: built
+                                          * up from the first bar (a running
+                                          * accumulation seeded there, or a
+                                          * path-dependent state machine), so it
+                                          * depends on the requested startIdx and
+                                          * never converges across ranges -- the
+                                          * same bar computed from a different
+                                          * startIdx can differ.
+                                          * e.g. AD, ADOSC, OBV, NVI, PVI, SAR,
+                                          * SAREXT.
+                                          */
+#define TA_FUNC_FLG_NAN_INF_OUT 0x40000000 /* Some inputs of ordinary
+                                          * magnitude have no finite result, so
+                                          * a successful call can write NaN or
+                                          * +/-Inf (e.g. ACOS outside [-1,1],
+                                          * LN of a negative value or of zero,
+                                          * 0/0, x/0). Not set where a
+                                          * non-finite value needs magnitudes
+                                          * large enough to overflow the
+                                          * intermediate arithmetic (~1e160 and
+                                          * up), which no flag describes. The
+                                          * function's page on ta-lib.org says
+                                          * when. ta_regtest holds every
+                                          * function WITHOUT this flag to
+                                          * finite output.
+                                          * ACOS, ASIN, DIV, LN, LOG10, SQRT,
+                                          * VWMA -- and no others.
+                                          */
+/* The 0x01000000-and-up run above is the historical allocation and now has one
+ * slot left, 0x80000000 -- the sign bit of the signed TA_FuncFlags, which is
+ * deliberately left unused. Further flags continue from the low end, where all
+ * 24 remaining bits are free (the TA_IN_/TA_OPTIN_/TA_OUT_ flags below live in
+ * their own fields and do not compete for these).
+ */
+#define TA_FUNC_FLG_PERIOD1_IDENTITY 0x00000001
+                                         /* A period of 1 performs no smoothing:
+                                          * the lookback is 0 and every output
+                                          * value is a bit-exact copy of its
+                                          * input value.
+                                          * Declared by the function rather than
+                                          * inferred, because the two cases are
+                                          * indistinguishable in the source:
+                                          * SMA's window math is already exact at
+                                          * a period of 1, while EMA's recurrence
+                                          * needs an explicit arm to be. e.g.
+                                          * SMA, EMA, RSI, VWMA.
+                                          * NOT set on MACD/MACDFIX: only their
+                                          * signal stage degenerates, the MACD
+                                          * line is still computed.
+                                          * ta_regtest sweeps every function
+                                          * carrying this flag and holds it to the
+                                          * copy on every API tier.
+                                          */
 
 typedef struct TA_FuncInfo
 {
@@ -192,7 +250,6 @@ typedef struct TA_FuncInfo
    const char * group;
 
    const char * hint;
-   const char * camelCaseName;
    TA_FuncFlags flags;
 
    unsigned int nbInput;
@@ -367,6 +424,9 @@ typedef int TA_OutputFlags;
 #define TA_OUT_ZERO              0x00000400 /* Output can be zero */
 #define TA_OUT_UPPER_LIMIT       0x00000800 /* Indicates that the values represent an upper limit. */
 #define TA_OUT_LOWER_LIMIT       0x00001000 /* Indicates that the values represent a lower limit. */
+#define TA_OUT_NULLABLE          0x00002000 /* The output pointer may be NULL: the caller can discard
+                                             * this output (it is computed but not written). E.g. MAMA's
+                                             * FAMA line when only the MAMA line is wanted. */
 
 
 /* The following 3 structures will exist for each input, optional

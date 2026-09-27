@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,17 +38,53 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
+/* QSTICK BEGIN */
+static const TA_IntegerRange TA_DEF_QSTICK_TimePeriod =
+{
+   1,
+   100000,
+   4,
+   200,
+   1
+};
 
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
+static const TA_OptInputParameterInfo TA_DEF_UI_D_QSTICK_TimePeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInTimePeriod",
+   0,
 
-/* None */
+   "Time Period",
+   (const void *)&TA_DEF_QSTICK_TimePeriod,
+   10,
+   "Time period",
+
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_QSTICK_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_OC,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_QSTICK_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_QSTICK_OptInputs[] =
+{ &TA_DEF_UI_D_QSTICK_TimePeriod,
+  NULL
+};
+
+DEF_FUNCTION( QSTICK,
+              TA_GroupId_MomentumIndicators,
+              "Qstick",
+              TA_FUNC_FLG_STREAM
+             );
+/* QSTICK END */
 
 /****************************************************************************
  * Step 2 - Add your TA function to the table.
@@ -56,6 +92,7 @@
  ****************************************************************************/
 const TA_FuncDef *TA_DEF_TableQ[] =
 {
+   ADD_TO_TABLE(QSTICK),
    NULL
 };
 
@@ -64,9 +101,3 @@ const TA_FuncDef *TA_DEF_TableQ[] =
 const unsigned int TA_DEF_TableQSize =
               ((sizeof(TA_DEF_TableQ)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -57,6 +57,7 @@
 #include "ta_test_priv.h"
 #include "ta_test_func.h"
 #include "ta_utility.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -131,7 +132,10 @@ static TA_Test tableTest[] =
    { TST_ADXR,0, 0, 0, 251, 14, TA_SUCCESS, 211, 20.4920,   40,  252-40 }, /* Last Value */
 
    { TST_PLUS_DM, 1, 0, 0, 251, 14, TA_SUCCESS, 0,   10.28,  13,  252-13 }, /* First Value */
-   { TST_PLUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 237, 10.317, 13,  252-13 },
+   /* Was 10.317 (#188). Wilder's +DM recomputed from the raw high/low series
+    * (seed = sum of the first 13 DMs, then prev - prev/14 + DM) is
+    * 10.3240037882024 at bar 250. */
+   { TST_PLUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 237, 10.3240038, 13,  252-13 },
    { TST_PLUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 238,  9.58,  13,  252-13 }, /* Last Value */
 
    { TST_PLUS_DI, 1, 0, 0, 251, 14, TA_SUCCESS, 0,   20.3781,   14,  252-14 }, /* First Value */
@@ -142,7 +146,9 @@ static TA_Test tableTest[] =
 
    { TST_MINUS_DM, 1, 0, 0, 251, 14, TA_SUCCESS, 0,   12.995,  13,  252-13 }, /* First Value */
    { TST_MINUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 237,  8.33,   13,  252-13 },
-   { TST_MINUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 238,  9.672,  13,  252-13 }, /* Last Value */
+   /* Was 9.672 (#188). Same Wilder recomputation as +DM above:
+    * 9.6775453701607 at bar 251. */
+   { TST_MINUS_DM, 0, 0, 0, 251, 14, TA_SUCCESS, 238,  9.67754537,  13,  252-13 }, /* Last Value */
 
    { TST_MINUS_DI, 1, 0, 0, 251, 14, TA_SUCCESS, 0,   30.1684,   14,  252-14 }, /* First Value */
    { TST_MINUS_DI, 0, 0, 0, 251, 14, TA_SUCCESS, 14,  24.969182,   14,  252-14 },
@@ -505,6 +511,39 @@ static ErrorNumber do_test( const TA_History *history,
 
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
 
+   if( server_verify_active() )
+   {
+      const char *funcName = NULL;
+      int hlcInputs = 1; /* 1 = HLC (3 inputs), 0 = HL (2 inputs) */
+      switch( test->id )
+      {
+      case TST_MINUS_DM: funcName = "MINUS_DM"; hlcInputs = 0; break;
+      case TST_PLUS_DM:  funcName = "PLUS_DM";  hlcInputs = 0; break;
+      case TST_MINUS_DI: funcName = "MINUS_DI"; break;
+      case TST_PLUS_DI:  funcName = "PLUS_DI";  break;
+      case TST_DX:       funcName = "DX";       break;
+      case TST_ADX:      funcName = "ADX";      break;
+      case TST_ADXR:     funcName = "ADXR";     break;
+      default: break;
+      }
+      if( funcName )
+      {
+         if( hlcInputs )
+            errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                                  retCode, outBegIdx, outNbElement,
+                                  (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, gBuffer[2].in, NULL },
+                                  (double[]){ (double)test->optInTimePeriod }, 1,
+                                  (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         else
+            errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                                  retCode, outBegIdx, outNbElement,
+                                  (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                                  (double[]){ (double)test->optInTimePeriod }, 1,
+                                  (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         if( errNb != TA_TEST_PASS ) return errNb;
+      }
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -606,9 +645,6 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    /* The previous call should have the same output as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[3].in );
    if( errNb != TA_TEST_PASS )

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -58,6 +58,7 @@
 #include "ta_test_priv.h"
 #include "ta_test_func.h"
 #include "ta_utility.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -111,17 +112,17 @@ static TA_Test tableTest[] =
    /****************/
    /*   TRIX TEST  */
    /****************/
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      0,   0.2589, 13,  252-13 }, /* First Value */
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      1,   0.010495, 13,  252-13 },
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-15,  -0.058, 13,  252-13 },
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-14,  -0.095, 13,  252-13 }, /* Last Value */
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      0,   0.2589, 13,  252-13 }, /* First Value */
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      1,   0.010495, 13,  252-13 },
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-15,  -0.058, 13,  252-13 },
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-14,  -0.095, 13,  252-13 }, /* Last Value */
 
 #if 0
    /* Metastock values. */
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      0,   0.221, 13,  252-13 }, /* First Value */
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      1,  -0.009, 13,  252-13 },
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-15,  -0.058, 13,  252-13 },
-   { 0, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-14,  -0.095, 13,  252-13 }, /* Last Value */
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      0,   0.221, 13,  252-13 }, /* First Value */
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS,      1,  -0.009, 13,  252-13 },
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-15,  -0.058, 13,  252-13 },
+   { 1, TA_TRIX_TEST, 0, 0, 251,  5, TA_SUCCESS, 252-14,  -0.095, 13,  252-13 }, /* Last Value */
 #endif
 
 };
@@ -251,6 +252,16 @@ static ErrorNumber do_test_per_ema( const TA_History *history,
    if( errNb != TA_TEST_PASS )
       return errNb;
 
+   if( server_verify_active() )
+   {
+      errNb = server_verify("TRIX", test->startIdx, test->endIdx, history->nbBars,
+                            retCode, outBegIdx, outNbElement,
+                            (const TA_Real*[]){ gBuffer[0].in, NULL },
+                            (double[]){ (double)test->optInTimePeriod }, 1,
+                            (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -270,9 +281,6 @@ static ErrorNumber do_test_per_ema( const TA_History *history,
 
    /* The previous call to TA_MA should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )

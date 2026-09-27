@@ -27,8 +27,8 @@ talib::chart(
 ## -----------------------------------------------------------------------------
 {
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
   talib::indicator(talib::RSI)
 }
 
@@ -44,9 +44,9 @@ talib::chart(
 {
   talib::chart(talib::BTC)
   talib::indicator(
-    talib::RSI(n = 10),
-    talib::RSI(n = 14),
-    talib::RSI(n = 21)
+    talib::RSI(timePeriod = 10),
+    talib::RSI(timePeriod = 14),
+    talib::RSI(timePeriod = 21)
   )
 }
 
@@ -54,7 +54,7 @@ talib::chart(
 {
   talib::chart(talib::BTC)
   talib::indicator(
-    talib::RSI(n = 14),
+    talib::RSI(timePeriod = 14),
     talib::MACD()
   )
 }
@@ -64,9 +64,9 @@ talib::chart(
   talib::chart(talib::BTC)
   talib::indicator(talib::BBANDS)
   talib::indicator(
-    talib::RSI(n = 10),
-    talib::RSI(n = 14),
-    talib::RSI(n = 21)
+    talib::RSI(timePeriod = 10),
+    talib::RSI(timePeriod = 14),
+    talib::RSI(timePeriod = 21)
   )
   talib::indicator(talib::MACD)
 }
@@ -136,10 +136,10 @@ talib::chart(
 ## -----------------------------------------------------------------------------
 {
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -148,10 +148,10 @@ talib::chart(
 {
   talib::set_theme$hawks_and_doves
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -160,10 +160,10 @@ talib::chart(
 {
   talib::set_theme$payout
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -172,10 +172,10 @@ talib::chart(
 {
   talib::set_theme$tp_slapped
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -184,10 +184,10 @@ talib::chart(
 {
   talib::set_theme$trust_the_process
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -196,10 +196,10 @@ talib::chart(
 {
   talib::set_theme$bloomberg_terminal
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -208,10 +208,10 @@ talib::chart(
 {
   talib::set_theme$limit_up
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -220,10 +220,10 @@ talib::chart(
 {
   talib::set_theme$bid_n_ask
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 7)
-  talib::indicator(talib::SMA, n = 14)
-  talib::indicator(talib::SMA, n = 21)
-  talib::indicator(talib::SMA, n = 28)
+  talib::indicator(talib::SMA, timePeriod = 7)
+  talib::indicator(talib::SMA, timePeriod = 14)
+  talib::indicator(talib::SMA, timePeriod = 21)
+  talib::indicator(talib::SMA, timePeriod = 28)
   talib::indicator(talib::MACD)
   talib::indicator(talib::trading_volume)
 }
@@ -268,7 +268,7 @@ options(
   talib::set_theme$hawks_and_doves
 
   talib::chart(talib::BTC)
-  talib::indicator(talib::SMA, n = 14)
+  talib::indicator(talib::SMA, timePeriod = 14)
   talib::indicator(talib::RSI)
 }
 

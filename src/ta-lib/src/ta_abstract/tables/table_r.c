@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,16 +38,6 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
-
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
-
 /* ROC BEGIN */
 static const TA_InputParameterInfo    *TA_ROC_Inputs[]    =
 {
@@ -66,11 +56,10 @@ static const TA_OptInputParameterInfo *TA_ROC_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ROC,                     /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Rate of change : ((price/prevPrice)-1)*100", /* hint */
-              "Roc",            /* CamelCase name */
-              0                 /* flags */
+DEF_FUNCTION( ROC,
+              TA_GroupId_MomentumIndicators,
+              "Rate of change : ((price/prevPrice)-1)*100",
+              TA_FUNC_FLG_STREAM
              );
 /* ROC END */
 
@@ -92,11 +81,10 @@ static const TA_OptInputParameterInfo *TA_ROCP_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ROCP,                    /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Rate of change Percentage: (price-prevPrice)/prevPrice", /* hint */
-              "RocP",           /* CamelCase name */
-              0                 /* flags */
+DEF_FUNCTION( ROCP,
+              TA_GroupId_MomentumIndicators,
+              "Rate of change Percentage: (price-prevPrice)/prevPrice",
+              TA_FUNC_FLG_STREAM
              );
 /* ROCP END */
 
@@ -118,11 +106,10 @@ static const TA_OptInputParameterInfo *TA_ROCR_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ROCR,                    /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Rate of change ratio: (price/prevPrice)", /* hint */
-              "RocR",           /* CamelCase name */
-              0                 /* flags */
+DEF_FUNCTION( ROCR,
+              TA_GroupId_MomentumIndicators,
+              "Rate of change ratio: (price/prevPrice)",
+              TA_FUNC_FLG_STREAM
              );
 /* ROCR END */
 
@@ -144,11 +131,10 @@ static const TA_OptInputParameterInfo *TA_ROCR100_OptInputs[] =
   NULL
 };
 
-DEF_FUNCTION( ROCR100,                    /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Rate of change ratio 100 scale: (price/prevPrice)*100", /* hint */
-              "RocR100",       /* CamelCase name */
-              0                /* flags */
+DEF_FUNCTION( ROCR100,
+              TA_GroupId_MomentumIndicators,
+              "Rate of change ratio 100 scale: (price/prevPrice)*100",
+              TA_FUNC_FLG_STREAM
              );
 /* ROCR100 END */
 
@@ -166,16 +152,14 @@ static const TA_OutputParameterInfo   *TA_RSI_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_RSI_OptInputs[] =
-{
-  &TA_DEF_UI_TimePeriod_14_MINIMUM2,
+{ &TA_DEF_UI_TimePeriod_14_MINIMUM2,
   NULL
 };
 
-DEF_FUNCTION( RSI,                        /* name */
-              TA_GroupId_MomentumIndicators,  /* groupId */
-              "Relative Strength Index",  /* hint */
-              "Rsi",                      /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER        /* flags */
+DEF_FUNCTION( RSI,
+              TA_GroupId_MomentumIndicators,
+              "Relative Strength Index",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* RSI END */
 
@@ -198,9 +182,3 @@ const TA_FuncDef *TA_DEF_TableR[] =
 const unsigned int TA_DEF_TableRSize =
               ((sizeof(TA_DEF_TableR)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

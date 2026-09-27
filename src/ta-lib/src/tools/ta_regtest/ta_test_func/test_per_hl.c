@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -36,14 +36,17 @@
  *  Initial  Name/description
  *  -------------------------------------------------------------------
  *  MF       Mario Fortier
- *
+ *  CC       Claude Code (AI assistant)
  *
  * Change history:
  *
- *  MMDDYY BY   Description
+ *  MMDDYY BY     Description
  *  -------------------------------------------------------------------
- *  020203 MF   First version.
- *  122506 MF   Add TA_BETA tests.
+ *  020203 MF     First version.
+ *  122506 MF     Add TA_BETA tests.
+ *  070226 MF,CC  Add TA_MIDPRICE tests pinning both scan strategies of
+ *                the hybrid implementation around its period-20
+ *                threshold (brute: 14,19,20 | cached-index: 21,30).
  */
 
 /* Description:
@@ -61,6 +64,8 @@
 #include "ta_test_func.h"
 #include "ta_utility.h"
 #include "ta_memory.h"
+#include "server_verify.h"
+#include "../../ta_alloc_check.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -77,7 +82,8 @@ TA_AROON_UP_TEST,
 TA_AROON_DOWN_TEST,
 TA_AROONOSC_TEST,
 TA_CORREL_TEST,
-TA_BETA_TEST
+TA_BETA_TEST,
+TA_MIDPRICE_TEST
 } TA_TestId;
 
 typedef struct
@@ -122,7 +128,14 @@ static TA_Test tableTest[] =
     * value you are expecting.
     */
 
-   { 1, TA_BETA_TEST,  0, 251, 5, TA_SUCCESS,      0, 0.62907,  5,  252-5 },
+   /* Was 0.62907 (#188). BETA's documented formula,
+    * beta = (n*Sxy - Sx*Sy) / (n*Sxx - Sx^2) over the 5 most recent return
+    * pairs of (high, low), recomputed from the raw series gives
+    * 0.629706508875607. The written value is that with "70" transposed to
+    * "07" -- the same slip as the WMA pair fixed in 7704dc8f. Constant and
+    * algorithm were added together in 2037a0ac (2007) and ta_BETA.c has not
+    * changed materially since, so the typo dates from the keystroke. */
+   { 1, TA_BETA_TEST,  0, 251, 5, TA_SUCCESS,      0, 0.629706509,  5,  252-5 },
    { 0, TA_BETA_TEST,  0, 251, 5, TA_SUCCESS,      1, 0.83604,  5,  252-5 },
 
    /*****************/
@@ -207,6 +220,33 @@ static TA_Test tableTest[] =
    { 0, TA_AROONOSC_TEST, 0, 251, 14, TA_SUCCESS, 252-16, -28.5714,  14,  252-14 },
    { 0, TA_AROONOSC_TEST, 0, 251, 14, TA_SUCCESS, 252-15, -14.28571,  14,  252-14 }, /* Last Value */
 
+   /*****************/
+   /* MIDPRICE TEST */
+   /*****************/
+   /* The MIDPRICE implementation picks its scan strategy by period:
+    * <= 20 uses the brute window rescan, > 20 the cached extremum
+    * index. Periods 19/20/21 pin both algorithms at the threshold;
+    * 14 covers the default period, 30 goes deeper into the cached arm.
+    * Each period also runs the full doRangeTest startIdx/endIdx sweep.
+    */
+   { 1, TA_MIDPRICE_TEST, 0, 251, 14, TA_SUCCESS,      0,  94.2200,  13,  252-13 }, /* First Value */
+   { 0, TA_MIDPRICE_TEST, 0, 251, 14, TA_SUCCESS,      1,  93.1875,  13,  252-13 },
+   { 0, TA_MIDPRICE_TEST, 0, 251, 14, TA_SUCCESS, 252-14, 108.6250,  13,  252-13 }, /* Last Value */
+
+   { 1, TA_MIDPRICE_TEST, 0, 251, 19, TA_SUCCESS,      0,  93.1875,  18,  252-18 }, /* First Value */
+   { 0, TA_MIDPRICE_TEST, 0, 251, 19, TA_SUCCESS, 252-19, 113.3100,  18,  252-18 }, /* Last Value */
+
+   { 1, TA_MIDPRICE_TEST, 0, 251, 20, TA_SUCCESS,      0,  93.1875,  19,  252-19 }, /* First Value */
+   { 0, TA_MIDPRICE_TEST, 0, 251, 20, TA_SUCCESS,      2,  93.0775,  19,  252-19 },
+   { 0, TA_MIDPRICE_TEST, 0, 251, 20, TA_SUCCESS, 252-20, 113.3100,  19,  252-19 }, /* Last Value */
+
+   { 1, TA_MIDPRICE_TEST, 0, 251, 21, TA_SUCCESS,      0,  93.1875,  20,  252-20 }, /* First Value */
+   { 0, TA_MIDPRICE_TEST, 0, 251, 21, TA_SUCCESS,      1,  93.0775,  20,  252-20 },
+   { 0, TA_MIDPRICE_TEST, 0, 251, 21, TA_SUCCESS, 252-21, 112.7450,  20,  252-20 }, /* Last Value */
+
+   { 1, TA_MIDPRICE_TEST, 0, 251, 30, TA_SUCCESS,      0,  90.2500,  29,  252-29 }, /* First Value */
+   { 0, TA_MIDPRICE_TEST, 0, 251, 30, TA_SUCCESS, 252-30, 107.8400,  29,  252-29 }, /* Last Value */
+
 };
 
 #define NB_TEST (sizeof(tableTest)/sizeof(TA_Test))
@@ -272,6 +312,7 @@ static TA_RetCode rangeTestFunction( TA_Integer    startIdx,
     * safe)
     */
    dummyBuffer = TA_Malloc( sizeof(double) * (endIdx-startIdx+100) );
+   TA_TOOL_CHECK_ALLOC(dummyBuffer);
    switch( testParam->test->theFunction )
    {
    case TA_AROON_UP_TEST:
@@ -333,6 +374,18 @@ static TA_RetCode rangeTestFunction( TA_Integer    startIdx,
                          outNbElement,
                          outputBuffer );
       *lookback = TA_BETA_Lookback(testParam->test->optInTimePeriod);
+      break;
+
+   case TA_MIDPRICE_TEST:
+      retCode = TA_MIDPRICE( startIdx,
+                             endIdx,
+                             testParam->high,
+                             testParam->low,
+                             testParam->test->optInTimePeriod,
+                             outBegIdx,
+                             outNbElement,
+                             outputBuffer );
+      *lookback = TA_MIDPRICE_Lookback( testParam->test->optInTimePeriod );
       break;
 
    default:
@@ -425,6 +478,18 @@ static ErrorNumber do_test( const TA_History *history,
                          );
       break;
 
+   case TA_MIDPRICE_TEST:
+      retCode = TA_MIDPRICE( test->startIdx,
+                             test->endIdx,
+                             gBuffer[0].in,
+                             gBuffer[1].in,
+                             test->optInTimePeriod,
+                             &outBegIdx,
+                             &outNbElement,
+                             gBuffer[0].out0
+                           );
+      break;
+
    default:
       retCode = TA_INTERNAL_ERROR(133);
    }
@@ -438,6 +503,62 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
+
+   if( server_verify_active() )
+   {
+      const char *funcName;
+      switch( test->theFunction )
+      {
+      case TA_AROON_UP_TEST:
+      case TA_AROON_DOWN_TEST:
+         funcName = "AROON";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (test->theFunction == TA_AROON_UP_TEST)
+                                  ? (const TA_Real*[]){ gBuffer[1].out0, gBuffer[0].out0, NULL }
+                                  : (const TA_Real*[]){ gBuffer[0].out0, gBuffer[1].out0, NULL },
+                               NULL);
+         break;
+      case TA_AROONOSC_TEST:
+         funcName = "AROONOSC";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_CORREL_TEST:
+         funcName = "CORREL";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_BETA_TEST:
+         funcName = "BETA";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_MIDPRICE_TEST:
+         funcName = "MIDPRICE";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      default:
+         errNb = TA_TEST_PASS;
+         break;
+      }
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
 
    outBegIdx = outNbElement = 0;
 
@@ -508,6 +629,18 @@ static ErrorNumber do_test( const TA_History *history,
                          );
       break;
 
+   case TA_MIDPRICE_TEST:
+      retCode = TA_MIDPRICE( test->startIdx,
+                             test->endIdx,
+                             gBuffer[0].in,
+                             gBuffer[1].in,
+                             test->optInTimePeriod,
+                             &outBegIdx,
+                             &outNbElement,
+                             gBuffer[0].in
+                           );
+      break;
+
    default:
       retCode = TA_INTERNAL_ERROR(134);
    }
@@ -519,9 +652,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[0].in );
    if( errNb != TA_TEST_PASS )
@@ -601,6 +731,18 @@ static ErrorNumber do_test( const TA_History *history,
                          );
       break;
 
+   case TA_MIDPRICE_TEST:
+      retCode = TA_MIDPRICE( test->startIdx,
+                             test->endIdx,
+                             gBuffer[0].in,
+                             gBuffer[1].in,
+                             test->optInTimePeriod,
+                             &outBegIdx,
+                             &outNbElement,
+                             gBuffer[1].in
+                           );
+      break;
+
    default:
       retCode = TA_INTERNAL_ERROR(135);
    }
@@ -611,9 +753,6 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    /* The previous call should have the same output as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent(  gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -629,7 +768,7 @@ static ErrorNumber do_test( const TA_History *history,
    if( test->doRangeTestFlag )
    {
       errNb = doRangeTest( rangeTestFunction,
-                           TA_FUNC_UNST_NONE,
+                           TA_TEST_UNST_NONE,
                            (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;

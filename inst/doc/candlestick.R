@@ -133,7 +133,7 @@ options(talib.normalize = TRUE)
 
 ## -----------------------------------------------------------------------------
 ## Evening Star with 30% penetration
-x <- talib::evening_star(talib::BTC, eps = 0.3)
+x <- talib::evening_star(talib::BTC, penetration = 0.3)
 sum(abs(x), na.rm = TRUE)
 
 ## -----------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -62,10 +62,12 @@
 /**** Headers ****/
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "ta_test_priv.h"
 #include "ta_test_func.h"
 #include "ta_utility.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -115,6 +117,8 @@ typedef struct
 /**** Local functions declarations.    ****/
 static ErrorNumber do_test( const TA_History *history,
                             const TA_Test *test );
+static ErrorNumber test_mfi_epsilon_issue107( void );
+static ErrorNumber test_mfi_realmove_issue107( void );
 
 /**** Local variables definitions.     ****/
 
@@ -174,6 +178,22 @@ ErrorNumber test_func_per_hlcv( TA_History *history )
    unsigned int i;
    ErrorNumber retValue;
 
+   /* Regression test for issue #107: MFI must not amplify a machine-epsilon
+    * residue into a spurious money-flow direction. Uses crafted degenerate
+    * data (not the standard history), so it lives outside the tableTest loop. */
+   retValue = test_mfi_epsilon_issue107();
+   if( retValue != TA_TEST_PASS )
+   {
+      printf( "Failed: MFI epsilon issue #107 regression test (Code=%d)\n", retValue );
+      return retValue;
+   }
+
+   retValue = test_mfi_realmove_issue107();
+   if( retValue != TA_TEST_PASS )
+   {
+      printf( "Failed: MFI real-move issue #107 regression test (Code=%d)\n", retValue );
+      return retValue;
+   }
 
    for( i=0; i < NB_TEST; i++ )
    {
@@ -203,6 +223,119 @@ ErrorNumber test_func_per_hlcv( TA_History *history )
 }
 
 /**** Local functions definitions.     ****/
+
+/* Issue #107 regression: MFI decides money-flow direction from the SIGN of the
+ * typical-price change (TP_today - TP_prev). When a series is economically flat
+ * — every bar has the SAME typical price mathematically — floating-point
+ * summation order leaves a sub-epsilon residue, and the old strict `>0`/`<0`
+ * test misreads that noise as a real up/down move, injecting a large
+ * (price x volume) money flow into the wrong bucket and producing a spurious
+ * non-zero MFI.
+ *
+ * Here every (high+low+close) sums to 8.29 mathematically; only one bar's FP
+ * sum differs (in its last bit), so the CORRECT answer is "no movement" and MFI
+ * must be 0.0 for the whole flat window. Pre-fix, the first output is ~57.69.
+ */
+static ErrorNumber test_mfi_epsilon_issue107( void )
+{
+   /* All triples sum to 8.29; only bar #1 (2.86+2.70+2.73) lands on
+    * 8.290000000000001, the others on exactly 8.29 — a pure machine-epsilon
+    * spread, not a real price move. Volumes are large so the misclassified
+    * money flow (TP*volume) clears the internal `<1.0` floor and surfaces. */
+   static const TA_Real high[]   = { 2.81, 2.86, 2.80, 2.79, 2.83, 2.84, 2.82, 2.85 };
+   static const TA_Real low[]    = { 2.70, 2.70, 2.71, 2.72, 2.68, 2.69, 2.71, 2.67 };
+   static const TA_Real close[]  = { 2.78, 2.73, 2.78, 2.78, 2.78, 2.76, 2.76, 2.77 };
+   static const TA_Real volume[] = { 12000, 15000, 11000, 18000, 13000, 16000, 14000, 17000 };
+   const int nbBars = (int)(sizeof(high)/sizeof(high[0]));
+   const int period = 5;
+
+   TA_Real out[16];
+   TA_Integer outBegIdx, outNbElement;
+   TA_RetCode retCode;
+   int i;
+
+   retCode = TA_MFI( 0, nbBars-1, high, low, close, volume, period,
+                     &outBegIdx, &outNbElement, out );
+
+   if( retCode != TA_SUCCESS )
+   {
+      printf( "  issue#107: TA_MFI returned %d\n", retCode );
+      return TA_MFI_EPSILON_ISSUE107_BAD_RETCODE;
+   }
+
+   /* period 5 over 8 bars -> outputs at indices 5,6,7 */
+   if( outBegIdx != period || outNbElement != nbBars-period )
+   {
+      printf( "  issue#107: bad range outBegIdx=%d (exp %d) outNbElement=%d (exp %d)\n",
+              outBegIdx, period, outNbElement, nbBars-period );
+      return TA_MFI_EPSILON_ISSUE107_BAD_RANGE;
+   }
+
+   for( i=0; i < outNbElement; i++ )
+   {
+      if( fabs(out[i]) > 1e-9 )
+      {
+         printf( "  issue#107: MFI[%d]=%.6f but the window is flat within machine "
+                 "epsilon, so MFI must be 0.0 (epsilon misclassified as a real move)\n",
+                 i, out[i] );
+         return TA_MFI_EPSILON_ISSUE107_WRONG_VALUE;
+      }
+   }
+
+   return TA_TEST_PASS;
+}
+
+/* Companion to test_mfi_epsilon_issue107 — the OPPOSITE failure mode. The scaled
+ * dead-zone must neutralize ONLY machine-epsilon noise, never a genuine (if
+ * small) price move. Here typical prices step by whole cents (~1e-4 relative,
+ * ~10 orders of magnitude above the ~2e-14 dead-zone), alternating up and down,
+ * so MFI must track them exactly as before. Locks in known-good values on a
+ * small fully-hardcoded dataset: if a future change widened the band it would
+ * swallow these moves and shift the outputs, tripping this test. */
+static ErrorNumber test_mfi_realmove_issue107( void )
+{
+   static const TA_Real high[]   = { 100.02, 100.06, 100.04, 100.10, 100.08, 100.14, 100.12, 100.20 };
+   static const TA_Real low[]    = {  99.98, 100.02, 100.00, 100.06, 100.04, 100.10, 100.08, 100.16 };
+   static const TA_Real close[]  = { 100.00, 100.04, 100.02, 100.08, 100.06, 100.12, 100.10, 100.18 };
+   static const TA_Real volume[] = {  1000,   1200,   1100,   1500,   1300,   1600,   1400,   1700 };
+   /* Correct MFI for period 5 (outputs at indices 5,6,7). */
+   static const TA_Real expected[] = { 64.1887659219, 44.9368041798, 64.0110490174 };
+   const int nbBars = (int)(sizeof(high)/sizeof(high[0]));
+   const int period = 5;
+
+   TA_Real out[16];
+   TA_Integer outBegIdx, outNbElement;
+   TA_RetCode retCode;
+   int i;
+
+   retCode = TA_MFI( 0, nbBars-1, high, low, close, volume, period,
+                     &outBegIdx, &outNbElement, out );
+
+   if( retCode != TA_SUCCESS )
+   {
+      printf( "  issue#107 realmove: TA_MFI returned %d\n", retCode );
+      return TA_MFI_EPSILON_ISSUE107_BAD_RETCODE;
+   }
+   if( outBegIdx != period || outNbElement != nbBars-period )
+   {
+      printf( "  issue#107 realmove: bad range outBegIdx=%d outNbElement=%d\n",
+              outBegIdx, outNbElement );
+      return TA_MFI_EPSILON_ISSUE107_BAD_RANGE;
+   }
+   for( i=0; i < outNbElement; i++ )
+   {
+      if( fabs(out[i] - expected[i]) > 1e-6 )
+      {
+         printf( "  issue#107 realmove: MFI[%d]=%.10f expected %.10f — a genuine "
+                 "cent-sized move was mis-handled (dead-zone too wide?)\n",
+                 i, out[i], expected[i] );
+         return TA_MFI_EPSILON_ISSUE107_WRONG_VALUE;
+      }
+   }
+
+   return TA_TEST_PASS;
+}
+
 static TA_RetCode rangeTestFunction( TA_Integer    startIdx,
                                      TA_Integer    endIdx,
                                      TA_Real      *outputBuffer,
@@ -305,11 +438,6 @@ static ErrorNumber do_test( const TA_History *history,
    setInputBuffer( 1, history->low,   history->nbBars );
    setInputBuffer( 2, history->close, history->nbBars );
 
-   /* Clear the unstable periods from previous tests. */
-   retCode = TA_SetUnstablePeriod( TA_FUNC_UNST_MFI, 0 );
-   if( retCode != TA_SUCCESS )
-      return TA_TEST_TFRR_SETUNSTABLE_PERIOD_FAIL;
-
    /* Make a simple first call. */
    switch( test->theFunction )
    {
@@ -379,6 +507,54 @@ static ErrorNumber do_test( const TA_History *history,
 
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
 
+   if( server_verify_active() )
+   {
+      const char *funcName;
+      switch( test->theFunction )
+      {
+      case TA_MFI_TEST:
+         funcName = "MFI";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in,
+                                                   gBuffer[2].in, history->volume, NULL },
+                               (double[]){ (double)test->optInTimePeriod }, 1,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_AD_TEST:
+         funcName = "AD";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in,
+                                                   gBuffer[2].in, history->volume, NULL },
+                               NULL, 0,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_ADOSC_3_10_TEST:
+         funcName = "ADOSC";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in,
+                                                   gBuffer[2].in, history->volume, NULL },
+                               (double[]){ 3.0, 10.0 }, 2,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      case TA_ADOSC_5_2_TEST:
+         funcName = "ADOSC";
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, gBuffer[1].in,
+                                                   gBuffer[2].in, history->volume, NULL },
+                               (double[]){ 5.0, 2.0 }, 2,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+         break;
+      default:
+         errNb = TA_TEST_PASS;
+         break;
+      }
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -446,9 +622,6 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    /* The previous call should have the same output as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[0].in );
    if( errNb != TA_TEST_PASS )
@@ -523,9 +696,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call to TA_MA should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -599,9 +769,6 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    /* The previous call should have the same output as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[2].in );
    if( errNb != TA_TEST_PASS )
@@ -624,15 +791,20 @@ static ErrorNumber do_test( const TA_History *history,
       switch( test->theFunction )
       {
       case TA_MFI_TEST:
+         /* MFI is a finite sliding-window sum (SMA-like), not an unstable/
+          * recursive function: its running add/subtract accumulator drifts
+          * by only ~1e-14, far inside the 1e-9 stable-comparison band. Test
+          * it as TA_TEST_UNST_NONE to enforce that stability across ranges.
+          */
          errNb = doRangeTest( rangeTestFunction,
-                              TA_FUNC_UNST_MFI,
+                              TA_TEST_UNST_NONE,
                               (void *)&testParam, 1, 0 );
          if( errNb != TA_TEST_PASS )
             return errNb;
          break;
       case TA_AD_TEST:
          errNb = doRangeTest( rangeTestFunction,
-                              TA_FUNC_UNST_NONE,
+                              TA_TEST_UNST_NONE,
                               (void *)&testParam, 1,
                               TA_DO_NOT_COMPARE );
          if( errNb != TA_TEST_PASS )

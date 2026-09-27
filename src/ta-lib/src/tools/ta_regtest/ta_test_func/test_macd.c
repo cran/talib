@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -58,6 +58,7 @@
 #include "ta_test_func.h"
 #include "ta_utility.h"
 #include "ta_memory.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -391,6 +392,51 @@ static ErrorNumber do_test( const TA_History *history,
    CHECK_EXPECTED_VALUE( gBuffer[0].out1, 1 );
    CHECK_EXPECTED_VALUE( gBuffer[0].out2, 2 );
 
+   if( server_verify_active() )
+   {
+      const char *funcName;
+      double optBuf[7];
+      int nbOpt;
+
+      switch( test->testId )
+      {
+      case TA_MACDFIX_TEST:
+         funcName = "MACDFIX";
+         optBuf[0] = (double)test->optInSignalPeriod_2;
+         nbOpt = 1;
+         break;
+      case TA_MACD_TEST:
+         funcName = "MACD";
+         optBuf[0] = (double)test->optInFastPeriod;
+         optBuf[1] = (double)test->optInSlowPeriod;
+         optBuf[2] = (double)test->optInSignalPeriod_2;
+         nbOpt = 3;
+         break;
+      case TA_MACDEXT_TEST:
+         funcName = "MACDEXT";
+         optBuf[0] = (double)test->optInFastPeriod;
+         optBuf[1] = (double)TA_MAType_EMA;
+         optBuf[2] = (double)test->optInSlowPeriod;
+         optBuf[3] = (double)TA_MAType_EMA;
+         optBuf[4] = (double)test->optInSignalPeriod_2;
+         optBuf[5] = (double)TA_MAType_EMA;
+         nbOpt = 6;
+         break;
+      default:
+         funcName = "MACD";
+         nbOpt = 0;
+         break;
+      }
+
+      errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                            retCode, outBegIdx, outNbElement,
+                            (const TA_Real*[]){ gBuffer[0].in, NULL },
+                            optBuf, nbOpt,
+                            (const TA_Real*[]){ gBuffer[0].out0, gBuffer[0].out1,
+                                               gBuffer[0].out2, NULL }, NULL);
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -440,9 +486,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -508,9 +551,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[1].out1, gBuffer[2].in );
    if( errNb != TA_TEST_PASS )
@@ -572,9 +612,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[2].out2, gBuffer[3].in );
    if( errNb != TA_TEST_PASS )

@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,17 +38,46 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
+/* HMA BEGIN */
+static const TA_OptInputParameterInfo TA_DEF_UI_D_HMA_TimePeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInTimePeriod",
+   0,
 
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
+   "Time Period",
+   (const void *)&TA_DEF_TimePeriod_Positive,
+   20,
+   "Time period",
 
-/* HT_DCPERIOD */
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_HMA_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_HMA_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_HMA_OptInputs[] =
+{ &TA_DEF_UI_D_HMA_TimePeriod,
+  NULL
+};
+
+DEF_FUNCTION( HMA,
+              TA_GroupId_OverlapStudies,
+              "Hull Moving Average",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PERIOD1_IDENTITY
+             );
+/* HMA END */
+
+/* HT_DCPERIOD BEGIN */
 static const TA_InputParameterInfo    *TA_HT_DCPERIOD_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
@@ -62,19 +91,16 @@ static const TA_OutputParameterInfo   *TA_HT_DCPERIOD_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_HT_DCPERIOD_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_DCPERIOD,                   /* name */
-              TA_GroupId_CycleIndicators,  /* groupId */
-              "Hilbert Transform - Dominant Cycle Period",  /* hint */
-              "HtDcPeriod",                       /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( HT_DCPERIOD,
+              TA_GroupId_CycleIndicators,
+              "Hilbert Transform - Dominant Cycle Period",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* HT_DCPERIOD END */
 
-/* HT_DCPHASE */
+/* HT_DCPHASE BEGIN */
 static const TA_InputParameterInfo    *TA_HT_DCPHASE_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
@@ -88,23 +114,20 @@ static const TA_OutputParameterInfo   *TA_HT_DCPHASE_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_HT_DCPHASE_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_DCPHASE,                   /* name */
-              TA_GroupId_CycleIndicators,  /* groupId */
-              "Hilbert Transform - Dominant Cycle Phase",  /* hint */
-              "HtDcPhase",   /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( HT_DCPHASE,
+              TA_GroupId_CycleIndicators,
+              "Hilbert Transform - Dominant Cycle Phase",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* HT_DCPHASE END */
 
-/* HT_PHASOR */
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_InPhase =
+/* HT_PHASOR BEGIN */
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_HT_PHASOR_outInPhase =
                                { TA_Output_Real, "outInPhase", TA_OUT_LINE };
 
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_Quadrature =
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_HT_PHASOR_outQuadrature =
                                { TA_Output_Real, "outQuadrature", TA_OUT_DASH_LINE };
 
 static const TA_InputParameterInfo    *TA_HT_PHASOR_Inputs[]    =
@@ -115,29 +138,26 @@ static const TA_InputParameterInfo    *TA_HT_PHASOR_Inputs[]    =
 
 static const TA_OutputParameterInfo   *TA_HT_PHASOR_Outputs[]   =
 {
-  &TA_DEF_UI_Output_Real_InPhase,
-  &TA_DEF_UI_Output_Real_Quadrature,
+  &TA_DEF_UI_Output_Real_HT_PHASOR_outInPhase,
+  &TA_DEF_UI_Output_Real_HT_PHASOR_outQuadrature,
   NULL
 };
 
 static const TA_OptInputParameterInfo *TA_HT_PHASOR_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_PHASOR,                   /* name */
-              TA_GroupId_CycleIndicators,  /* groupId */
-              "Hilbert Transform - Phasor Components",  /* hint */
-              "HtPhasor",                       /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( HT_PHASOR,
+              TA_GroupId_CycleIndicators,
+              "Hilbert Transform - Phasor Components",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* HT_PHASOR END */
 
-/* HT_SINE */
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_Sine =
+/* HT_SINE BEGIN */
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_HT_SINE_outSine =
                                { TA_Output_Real, "outSine", TA_OUT_LINE };
 
-const TA_OutputParameterInfo TA_DEF_UI_Output_Real_LeadSine =
+const TA_OutputParameterInfo TA_DEF_UI_Output_Real_HT_SINE_outLeadSine =
                                { TA_Output_Real, "outLeadSine", TA_OUT_DASH_LINE };
 
 static const TA_InputParameterInfo    *TA_HT_SINE_Inputs[]    =
@@ -148,25 +168,22 @@ static const TA_InputParameterInfo    *TA_HT_SINE_Inputs[]    =
 
 static const TA_OutputParameterInfo   *TA_HT_SINE_Outputs[]   =
 {
-  &TA_DEF_UI_Output_Real_Sine,
-  &TA_DEF_UI_Output_Real_LeadSine,
+  &TA_DEF_UI_Output_Real_HT_SINE_outSine,
+  &TA_DEF_UI_Output_Real_HT_SINE_outLeadSine,
   NULL
 };
 
 static const TA_OptInputParameterInfo *TA_HT_SINE_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_SINE,                   /* name */
-              TA_GroupId_CycleIndicators,  /* groupId */
-              "Hilbert Transform - SineWave",  /* hint */
-              "HtSine",                       /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( HT_SINE,
+              TA_GroupId_CycleIndicators,
+              "Hilbert Transform - SineWave",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* HT_SINE END */
 
-/* HT_TRENDLINE */
+/* HT_TRENDLINE BEGIN */
 static const TA_InputParameterInfo    *TA_HT_TRENDLINE_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
@@ -180,19 +197,16 @@ static const TA_OutputParameterInfo   *TA_HT_TRENDLINE_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_HT_TRENDLINE_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_TRENDLINE,                   /* name */
-              TA_GroupId_OverlapStudies,  /* groupId */
-              "Hilbert Transform - Instantaneous Trendline",  /* hint */
-              "HtTrendline", /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER|TA_FUNC_FLG_OVERLAP /* flags */
+DEF_FUNCTION( HT_TRENDLINE,
+              TA_GroupId_OverlapStudies,
+              "Hilbert Transform - Instantaneous Trendline",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_STREAM
              );
 /* HT_TRENDLINE END */
 
-/* HT_TRENDMODE */
+/* HT_TRENDMODE BEGIN */
 static const TA_InputParameterInfo    *TA_HT_TRENDMODE_Inputs[]    =
 {
   &TA_DEF_UI_Input_Real,
@@ -206,15 +220,12 @@ static const TA_OutputParameterInfo   *TA_HT_TRENDMODE_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_HT_TRENDMODE_OptInputs[] =
-{
-  NULL
-};
+{ NULL };
 
-DEF_FUNCTION( HT_TRENDMODE,                   /* name */
-              TA_GroupId_CycleIndicators,  /* groupId */
-              "Hilbert Transform - Trend vs Cycle Mode",  /* hint */
-              "HtTrendMode",                       /* CamelCase name */
-              TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( HT_TRENDMODE,
+              TA_GroupId_CycleIndicators,
+              "Hilbert Transform - Trend vs Cycle Mode",
+              TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM
              );
 /* HT_TRENDMODE END */
 
@@ -224,6 +235,7 @@ DEF_FUNCTION( HT_TRENDMODE,                   /* name */
  ****************************************************************************/
 const TA_FuncDef *TA_DEF_TableH[] =
 {
+   ADD_TO_TABLE(HMA),
    ADD_TO_TABLE(HT_DCPERIOD),
    ADD_TO_TABLE(HT_DCPHASE),
    ADD_TO_TABLE(HT_PHASOR),
@@ -238,9 +250,3 @@ const TA_FuncDef *TA_DEF_TableH[] =
 const unsigned int TA_DEF_TableHSize =
               ((sizeof(TA_DEF_TableH)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

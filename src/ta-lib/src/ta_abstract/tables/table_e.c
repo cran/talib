@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -38,15 +38,44 @@
 #include "ta_abstract.h"
 #include "ta_def_ui.h"
 
-/* Follow the 3 steps defined below for adding a new TA Function to this
- * file.
- */
+/* EFI BEGIN */
+static const TA_OptInputParameterInfo TA_DEF_UI_D_EFI_TimePeriod =
+{
+   TA_OptInput_IntegerRange,
+   "optInTimePeriod",
+   0,
 
-/****************************************************************************
- * Step 1 - Define here the interface to your TA functions with
- *          the macro DEF_FUNCTION.
- *
- ****************************************************************************/
+   "Time Period",
+   (const void *)&TA_DEF_TimePeriod_Positive,
+   13,
+   "Time period",
+
+   NULL
+};
+
+static const TA_InputParameterInfo    *TA_EFI_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Price_CV,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_EFI_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_EFI_OptInputs[] =
+{ &TA_DEF_UI_D_EFI_TimePeriod,
+  NULL
+};
+
+DEF_FUNCTION( EFI,
+              TA_GroupId_VolumeIndicators,
+              "Elder's Force Index",
+              TA_FUNC_FLG_STREAM
+             );
+/* EFI END */
 
 /* EMA BEGIN */
 static const TA_InputParameterInfo    *TA_EMA_Inputs[]    =
@@ -62,20 +91,38 @@ static const TA_OutputParameterInfo   *TA_EMA_Outputs[]   =
 };
 
 static const TA_OptInputParameterInfo *TA_EMA_OptInputs[] =
-{ &TA_DEF_UI_TimePeriod_30_MINIMUM2,
+{ &TA_DEF_UI_TimePeriod_30,
   NULL
 };
 
-DEF_FUNCTION( EMA,                        /* name */
-              TA_GroupId_OverlapStudies,  /* groupId */
-              "Exponential Moving Average", /* hint */
-              "Ema",                       /* CamelCase name */
-              TA_FUNC_FLG_OVERLAP|TA_FUNC_FLG_UNST_PER /* flags */
+DEF_FUNCTION( EMA,
+              TA_GroupId_OverlapStudies,
+              "Exponential Moving Average",
+              TA_FUNC_FLG_OVERLAP | TA_FUNC_FLG_UNST_PER | TA_FUNC_FLG_STREAM | TA_FUNC_FLG_PERIOD1_IDENTITY
              );
 /* EMA END */
 
 /* EXP BEGIN */
-DEF_MATH_UNARY_OPERATOR( EXP, "Vector Arithmetic Exp", "Exp" )
+static const TA_InputParameterInfo    *TA_EXP_Inputs[]    =
+{
+  &TA_DEF_UI_Input_Real,
+  NULL
+};
+
+static const TA_OutputParameterInfo   *TA_EXP_Outputs[]   =
+{
+  &TA_DEF_UI_Output_Real,
+  NULL
+};
+
+static const TA_OptInputParameterInfo *TA_EXP_OptInputs[] =
+{ NULL };
+
+DEF_FUNCTION( EXP,
+              TA_GroupId_MathTransform,
+              "Vector Arithmetic Exp",
+              TA_FUNC_FLG_STREAM
+             );
 /* EXP END */
 
 /****************************************************************************
@@ -84,6 +131,7 @@ DEF_MATH_UNARY_OPERATOR( EXP, "Vector Arithmetic Exp", "Exp" )
  ****************************************************************************/
 const TA_FuncDef *TA_DEF_TableE[] =
 {
+   ADD_TO_TABLE(EFI),
    ADD_TO_TABLE(EMA),
    ADD_TO_TABLE(EXP),
    NULL
@@ -94,9 +142,3 @@ const TA_FuncDef *TA_DEF_TableE[] =
 const unsigned int TA_DEF_TableESize =
               ((sizeof(TA_DEF_TableE)/sizeof(TA_FuncDef *))-1);
 
-
-/****************************************************************************
- * Step 3 - Make sure "gen_code" is executed for generating all other
- *          source files derived from this one.
- *          You can then re-compile the library as usual and you are done!
- ****************************************************************************/

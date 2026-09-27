@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -88,6 +88,7 @@
 #include "ta_test_priv.h"
 #include "ta_test_func.h"
 #include "ta_utility.h"
+#include "server_verify.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -458,6 +459,26 @@ static ErrorNumber do_test( const TA_History *history,
 
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
 
+   if( server_verify_active() )
+   {
+      const char *funcName;
+      switch( test->theFunction )
+      {
+      case TA_MOM_TEST:     funcName = "MOM";     break;
+      case TA_ROC_TEST:     funcName = "ROC";     break;
+      case TA_ROCP_TEST:    funcName = "ROCP";    break;
+      case TA_ROCR_TEST:    funcName = "ROCR";    break;
+      case TA_ROCR100_TEST: funcName = "ROCR100"; break;
+      default:              funcName = "UNKNOWN";  break;
+      }
+      errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                            retCode, outBegIdx, outNbElement,
+                            (const TA_Real*[]){ gBuffer[0].in, NULL },
+                            (double[]){ (double)test->optInTimePeriod }, 1,
+                            (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output are the
@@ -519,9 +540,6 @@ static ErrorNumber do_test( const TA_History *history,
    }
 
    /* The previous call should have the same output as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -542,7 +560,7 @@ static ErrorNumber do_test( const TA_History *history,
    {
       errNb = doRangeTest(
                            rangeTestFunction,
-                           TA_FUNC_UNST_NONE,
+                           TA_TEST_UNST_NONE,
                            (void *)&testParam, 1, 0 );
       if( errNb != TA_TEST_PASS )
          return errNb;

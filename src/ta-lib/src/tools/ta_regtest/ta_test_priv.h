@@ -25,6 +25,18 @@ typedef struct
 ErrorNumber test_internals( void );
 ErrorNumber test_abstract( void );
 
+/* Set optional codegen server for abstract verification.
+ * Pass NULL to disable. When set, test_abstract() also verifies
+ * every TA_CallFunc against the server's abstract_call endpoint. */
+#include "codegen_pipe.h"
+void test_abstract_set_server(CodegenPipe *cp, const char *lang);
+
+/* Run abstract metadata parity (TA_GetFuncInfo + the three param-info getters)
+ * for every function against the server set via test_abstract_set_server(),
+ * comparing to the C reference. Does NOT exercise abstract_call. Returns
+ * TA_TEST_PASS on full parity. Used to lock cross-language introspection in CI. */
+ErrorNumber test_abstract_server_metadata( const char *functionFilter );
+
 ErrorNumber freeLib( void );
 ErrorNumber allocLib( void );
 
@@ -89,15 +101,18 @@ ErrorNumber checkDataSame( const TA_Real *data,
                            const TA_Real *originalInput,
                            unsigned int nbElement );
 
-/* Check that the content of the first buffer
- * is found in the second buffer (when the elements
- * in the first buffer is NAN, no check is done for
- * this paricular element).
+/* Two runs of the SAME call (separate output buffer vs in-place): bit-identical.
+ * Elements holding a reserved buffer pattern are skipped.
  *
  * Return TA_TEST_PASS if no difference are found.
  */
 ErrorNumber checkSameContent( TA_Real *buffer1,
                               TA_Real *buffer2 );
+
+/* Two DIFFERENT implementations of one function (naive reference vs shipped):
+ * the contract is a tolerance, not bit-identity. */
+ErrorNumber checkSameContentApprox( TA_Real *buffer1,
+                                    TA_Real *buffer2 );
 
 ErrorNumber checkExpectedValue( const TA_Real *data,
                                 TA_RetCode retCode, TA_RetCode expectedRetCode,
@@ -152,6 +167,16 @@ ErrorNumber checkExpectedValue( const TA_Real *data,
 #define MAX_RANGE_SIZE 252
 #define MAX_RANGE_END  (MAX_RANGE_SIZE-1)
 
+/* "This function has no unstable period" marker for the test tables.
+ *
+ * This was TA_FUNC_UNST_NONE, which the library used to publish. It was
+ * useless in the public contract -- it is rejected as input and the library
+ * never returns a TA_FuncUnstId -- so it was removed, and the only consumer
+ * left was this harness. Any value outside 0..TA_FUNC_UNST_COUNT-1 that is
+ * not the wildcard works; -1 keeps the tables reading as they did.
+ */
+#define TA_TEST_UNST_NONE ((TA_FuncUnstId)-1)
+
 typedef TA_RetCode (*RangeTestFunction)( TA_Integer    startIdx,
                                          TA_Integer    endIdx,
                                          TA_Real      *outputBuffer,
@@ -193,11 +218,84 @@ typedef TA_RetCode (*RangeTestFunction)( TA_Integer    startIdx,
  * test_util.c for more info).
  */
 #define TA_DO_NOT_COMPARE 0xFFFFFFFF
+
+/* Explicit classification of how a function's output behaves when the SAME bar
+ * is recomputed from a different startIdx (the range-test / self-coherency
+ * property).
+ *
+ * This is DECOUPLED from TA_FuncUnstId on purpose. Whether a function carries an
+ * unstable-period id (the sweep mechanism) is a separate concern from the
+ * tolerance its numerical nature warrants. The tolerance tier used to be
+ * *inferred* as "unstId == NONE ? tight : loose", which let a vestigial
+ * unstable-period flag hand a finite-window function the loose convergence
+ * tolerance and hide a real bug (IMI, issue #14; MFI, issue #4). The class is
+ * now stated explicitly and cross-checked against the unstable-period id (see
+ * the guard in doRangeTestEx).
+ */
+typedef enum
+{
+   TA_STABLE_EXACT,      /* Fresh-recomputed finite window -> bit-exact across
+                          * ranges; any difference is a bug (e.g. IMI). */
+   TA_STABLE_EPSILON,    /* Finite window via a running accumulator / algebraic
+                          * re-order -> ~1e-10 FP drift only (e.g. MFI, running-
+                          * sum MAs). */
+   TA_STABLE_CONVERGING, /* Recursive / IIR -> the value depends on how far back
+                          * the recursion started; the unstable period bounds the
+                          * residual, so the tolerance is loose early and tightens
+                          * (e.g. EMA, RSI, ADX, ATR, T3, HT_*). */
+   TA_STABLE_SKIP        /* Non-converging accumulation seeded at startIdx or a
+                          * path-dependent state machine -> cross-range
+                          * comparison is meaningless. This set is the functions
+                          * carrying the `path_dependent` YAML flag, surfaced
+                          * through ta_abstract as TA_FUNC_FLG_PATH_DEP (issue
+                          * #127; e.g. AD, OBV, SAR). */
+} TA_RangeStability;
+
 ErrorNumber doRangeTest( RangeTestFunction testFunction,
                          TA_FuncUnstId unstId,
                          void *opaqueData,
                          unsigned int nbOutput,
                          unsigned int integerTolerance );
+
+/* Same as doRangeTest, but the value-comparison tolerance is driven by an
+ * explicit range-stability class instead of being inferred from unstId.
+ * doRangeTest is a thin wrapper that derives the class from
+ * (unstId, integerTolerance) for the legacy call sites. unstId is still
+ * required here: it selects which unstable period to sweep and feeds the
+ * convergence math for TA_STABLE_CONVERGING. */
+ErrorNumber doRangeTestEx( RangeTestFunction testFunction,
+                           TA_RangeStability stability,
+                           TA_FuncUnstId unstId,
+                           void *opaqueData,
+                           unsigned int nbOutput,
+                           unsigned int integerTolerance );
+
+/* Compare one computed value against an external-oracle golden.
+ *
+ * Passes when   |got - want| <= absTol + relTol * |want|.
+ *
+ * WHY NOT RELATIVE-ONLY. The original PVO/CMOU template divided by |want| and
+ * justified it with "every golden |value| >> 1". That holds only because those
+ * goldens were hand-picked away from zero. Relative error is UNBOUNDED as
+ * want -> 0, so for any oscillator that crosses zero a relative-only check must
+ * either be loosened until it no longer bites away from the crossing, or it
+ * fails spuriously at it. Measured examples in this codebase's candidate set:
+ * FOSC 8.6e-10 and AO 6.7e-13 relative at a crossing, against 8.9e-14 away from
+ * one -- four orders of magnitude of spread that says nothing about correctness.
+ *
+ * This is the issue #107 abs-near-zero / rel-away-from-zero rule in the form
+ * used by every mature numerical comparison. Choose absTol from the measured
+ * noise floor AT a crossing, and relTol from the measured agreement where
+ * |want| is O(1) or larger; a wrong formula misses by whole percent and is
+ * caught by either term.
+ *
+ * Returns 1 on match, 0 on mismatch. On return, *outErr (optional) receives the
+ * error in the regime that dominated and *outMode (optional) a short label
+ * ("abs" or "rel") for use in the failure message.
+ */
+int checkOracleValue( double got, double want,
+                      double relTol, double absTol,
+                      double *outErr, const char **outMode );
 
 /* Print out info about a retCode */
 void printRetCode( TA_RetCode retCode );

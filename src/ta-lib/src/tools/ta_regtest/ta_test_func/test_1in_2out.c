@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -62,6 +62,8 @@
 #include "ta_test_func.h"
 #include "ta_utility.h"
 #include "ta_memory.h"
+#include "server_verify.h"
+#include "../../ta_alloc_check.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -224,6 +226,7 @@ static TA_RetCode rangeTestFunction( TA_Integer    startIdx,
    testParam = (TA_RangeTestParam *)opaqueData;
 
    dummyOutput = TA_Malloc( (endIdx-startIdx+1) * sizeof(TA_Real) );
+   TA_TOOL_CHECK_ALLOC(dummyOutput);
 
    if( outputNb == 0 )
    {
@@ -340,6 +343,17 @@ static ErrorNumber do_test( const TA_History *history,
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
    CHECK_EXPECTED_VALUE( gBuffer[0].out1, 1 );
 
+   if( server_verify_active() )
+   {
+      const char *name = (test->theFunction == TA_HT_PHASOR_TEST) ? "HT_PHASOR" : "HT_SINE";
+      errNb = server_verify(name, test->startIdx, test->endIdx, history->nbBars,
+                            retCode, outBegIdx, outNbElement,
+                            (const TA_Real*[]){ gBuffer[0].in, NULL },
+                            NULL, 0,
+                            (const TA_Real*[]){ gBuffer[0].out0, gBuffer[0].out1, NULL }, NULL);
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
+
    outBegIdx = outNbElement = 0;
 
    /* Make another call where the input and the output
@@ -373,9 +387,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[0].in );
    if( errNb != TA_TEST_PASS )
@@ -419,9 +430,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out1, gBuffer[1].in );
    if( errNb != TA_TEST_PASS )
@@ -457,7 +465,7 @@ static ErrorNumber do_test( const TA_History *history,
 
       default:
          errNb = doRangeTest( rangeTestFunction,
-                              TA_FUNC_UNST_NONE,
+                              TA_TEST_UNST_NONE,
                               (void *)&testParam, 1, 0 );
       }
       if( errNb != TA_TEST_PASS )

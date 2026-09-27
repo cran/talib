@@ -1,4 +1,4 @@
-/* TA-LIB Copyright (c) 1999-2025, Mario Fortier
+/* TA-LIB Copyright (c) 1999-2026, Mario Fortier
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or
@@ -62,6 +62,8 @@
 #include "ta_test_func.h"
 #include "ta_utility.h"
 #include "ta_memory.h"
+#include "server_verify.h"
+#include "../../ta_alloc_check.h"
 
 /**** External functions declarations. ****/
 /* None */
@@ -240,6 +242,7 @@ static TA_RetCode rangeTestFunction( TA_Integer    startIdx,
       #define ALLOC_INT_BUFFER(varSize)  \
       { \
          intBuffer = TA_Malloc(sizeof(TA_Integer)*(varSize+2)); \
+         TA_TOOL_CHECK_ALLOC(intBuffer); \
          intBuffer[0]      = PRE_SENTINEL; \
          intBuffer[varSize+1] = POST_SENTINEL; \
       }
@@ -301,6 +304,7 @@ static ErrorNumber do_test( const TA_History *history,
    const TA_Real *referenceInput;
 
    TA_Integer *intBuffer;
+   TA_Integer svIntOutput[MAX_NB_TEST_ELEMENT];
    int size, i;
 
    /* Set to NAN all the elements of the gBuffers.  */
@@ -367,6 +371,9 @@ static ErrorNumber do_test( const TA_History *history,
                                  &outBegIdx,
                                  &outNbElement,
                                  &intBuffer[1] );
+      /* Save integer output for server_verify before FREE_INT_BUFFER frees intBuffer. */
+      for( i=0; i < outNbElement && i < MAX_NB_TEST_ELEMENT; i++ )
+         svIntOutput[i] = intBuffer[i+1];
       FREE_INT_BUFFER( gBuffer[0].out0, outNbElement );
       break;
    case TA_SIN_TEST:
@@ -387,6 +394,38 @@ static ErrorNumber do_test( const TA_History *history,
       return errNb;
 
    CHECK_EXPECTED_VALUE( gBuffer[0].out0, 0 );
+
+   if( server_verify_active() )
+   {
+      const char *funcName;
+      switch( test->theFunction )
+      {
+      case TA_HT_DCPERIOD_TEST:  funcName = "HT_DCPERIOD";  break;
+      case TA_HT_DCPHASE_TEST:   funcName = "HT_DCPHASE";   break;
+      case TA_HT_TRENDLINE_TEST: funcName = "HT_TRENDLINE";  break;
+      case TA_HT_TRENDMODE_TEST: funcName = "HT_TRENDMODE";  break;
+      case TA_SIN_TEST:          funcName = "SIN";            break;
+      default:                   funcName = "UNKNOWN";        break;
+      }
+
+      if( test->theFunction == TA_HT_TRENDMODE_TEST )
+      {
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, NULL },
+                               NULL, 0,
+                               NULL, (const TA_Integer*[]){ &svIntOutput[0], NULL });
+      }
+      else
+      {
+         errNb = server_verify(funcName, test->startIdx, test->endIdx, history->nbBars,
+                               retCode, outBegIdx, outNbElement,
+                               (const TA_Real*[]){ gBuffer[0].in, NULL },
+                               NULL, 0,
+                               (const TA_Real*[]){ gBuffer[0].out0, NULL }, NULL);
+      }
+      if( errNb != TA_TEST_PASS ) return errNb;
+   }
 
    outBegIdx = outNbElement = 0;
 
@@ -449,9 +488,6 @@ static ErrorNumber do_test( const TA_History *history,
 
    /* The previous call should have the same output
     * as this call.
-    *
-    * checkSameContent verify that all value different than NAN in
-    * the first parameter is identical in the second parameter.
     */
    errNb = checkSameContent( gBuffer[0].out0, gBuffer[0].in );
    if( errNb != TA_TEST_PASS )
@@ -495,7 +531,7 @@ static ErrorNumber do_test( const TA_History *history,
 
       default:
          errNb = doRangeTest( rangeTestFunction,
-                              TA_FUNC_UNST_NONE,
+                              TA_TEST_UNST_NONE,
                               (void *)&testParam, 1, 0 );
       }
       if( errNb != TA_TEST_PASS )

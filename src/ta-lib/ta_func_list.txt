@@ -1,3 +1,4 @@
+AC                  Accelerator/Decelerator Oscillator
 ACCBANDS            Acceleration Bands
 ACOS                Vector Trigonometric ACos
 AD                  Chaikin A/D Line
@@ -5,14 +6,15 @@ ADD                 Vector Arithmetic Add
 ADOSC               Chaikin A/D Oscillator
 ADX                 Average Directional Movement Index
 ADXR                Average Directional Movement Index Rating
+AO                  Awesome Oscillator
 APO                 Absolute Price Oscillator
 AROON               Aroon
 AROONOSC            Aroon Oscillator
 ASIN                Vector Trigonometric ASin
 ATAN                Vector Trigonometric ATan
 ATR                 Average True Range
-AVGPRICE            Average Price
 AVGDEV              Average Deviation
+AVGPRICE            Average Price
 BBANDS              Bollinger Bands
 BETA                Beta
 BOP                 Balance Of Power
@@ -20,7 +22,7 @@ CCI                 Commodity Channel Index
 CDL2CROWS           Two Crows
 CDL3BLACKCROWS      Three Black Crows
 CDL3INSIDE          Three Inside Up/Down
-CDL3LINESTRIKE      Three-Line Strike 
+CDL3LINESTRIKE      Three-Line Strike
 CDL3OUTSIDE         Three Outside Up/Down
 CDL3STARSINSOUTH    Three Stars In The South
 CDL3WHITESOLDIERS   Three Advancing White Soldiers
@@ -79,16 +81,20 @@ CDLUNIQUE3RIVER     Unique 3 River
 CDLUPSIDEGAP2CROWS  Upside Gap Two Crows
 CDLXSIDEGAP3METHODS Upside/Downside Gap Three Methods
 CEIL                Vector Ceil
+CMF                 Chaikin Money Flow
 CMO                 Chande Momentum Oscillator
+CMOU                Chande Momentum Oscillator (Unsmoothed)
 CORREL              Pearson's Correlation Coefficient (r)
 COS                 Vector Trigonometric Cos
 COSH                Vector Trigonometric Cosh
 DEMA                Double Exponential Moving Average
 DIV                 Vector Arithmetic Div
 DX                  Directional Movement Index
+EFI                 Elder's Force Index
 EMA                 Exponential Moving Average
 EXP                 Vector Arithmetic Exp
 FLOOR               Vector Floor
+HMA                 Hull Moving Average
 HT_DCPERIOD         Hilbert Transform - Dominant Cycle Period
 HT_DCPHASE          Hilbert Transform - Dominant Cycle Phase
 HT_PHASOR           Hilbert Transform - Phasor Components
@@ -108,6 +114,7 @@ MACD                Moving Average Convergence/Divergence
 MACDEXT             MACD with controllable MA type
 MACDFIX             Moving Average Convergence/Divergence Fix 12/26
 MAMA                MESA Adaptive Moving Average
+MARKETFI            Market Facilitation Index
 MAVP                Moving average with variable period
 MAX                 Highest value over a specified period
 MAXINDEX            Index of highest value over a specified period
@@ -124,10 +131,14 @@ MINUS_DM            Minus Directional Movement
 MOM                 Momentum
 MULT                Vector Arithmetic Mult
 NATR                Normalized Average True Range
+NVI                 Negative Volume Index
 OBV                 On Balance Volume
 PLUS_DI             Plus Directional Indicator
 PLUS_DM             Plus Directional Movement
 PPO                 Percentage Price Oscillator
+PVI                 Positive Volume Index
+PVO                 Percentage Volume Oscillator
+QSTICK              Qstick
 ROC                 Rate of change : ((price/prevPrice)-1)*100
 ROCP                Rate of change Percentage: (price-prevPrice)/prevPrice
 ROCR                Rate of change ratio: (price/prevPrice)
@@ -138,6 +149,7 @@ SAREXT              Parabolic SAR - Extended
 SIN                 Vector Trigonometric Sin
 SINH                Vector Trigonometric Sinh
 SMA                 Simple Moving Average
+SMI                 Stochastic Momentum Index
 SQRT                Vector Square Root
 STDDEV              Standard Deviation
 STOCH               Stochastic
@@ -156,6 +168,9 @@ TSF                 Time Series Forecast
 TYPPRICE            Typical Price
 ULTOSC              Ultimate Oscillator
 VAR                 Variance
+VWAP                Volume Weighted Average Price
+VWMA                Volume Weighted Moving Average
+WAD                 Williams' Accumulation/Distribution
 WCLPRICE            Weighted Close Price
 WILLR               Williams' %R
 WMA                 Weighted Moving Average

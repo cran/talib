@@ -7,7 +7,7 @@ knitr::opts_chunk$set(
 	comment = "#>",
 	out.width = "100%",
 	out.height = "680",
-	fig.align = "center"
+	fig.aligtimePeriod = "center"
 )
 
 ## -----------------------------------------------------------------------------
@@ -49,19 +49,19 @@ is.double(
 ## -----------------------------------------------------------------------------
 ## these are equivalent
 identical(
-	talib::relative_strength_index(talib::BTC, n = 14),
-	talib::RSI(talib::BTC, n = 14)
+	talib::relative_strength_index(talib::BTC, timePeriod = 14),
+	talib::RSI(talib::BTC, timePeriod = 14)
 )
 
 ## -----------------------------------------------------------------------------
-## SMA with n = 5 has a lookback of 4
+## SMA with timePeriod = 5 has a lookback of 4
 head(
-	talib::SMA(talib::BTC, n = 5),
-	n = 7
+	talib::SMA(talib::BTC, timePeriod = 5),
+	timePeriod = 7
 )
 
 ## -----------------------------------------------------------------------------
-x <- talib::SMA(talib::BTC, n = 20)
+x <- talib::SMA(talib::BTC, timePeriod = 20)
 attr(x, "lookback")
 
 ## -----------------------------------------------------------------------------
@@ -112,7 +112,7 @@ nrow(talib::RSI(x, na.bridge = TRUE)) == nrow(x)
 ## -----------------------------------------------------------------------------
 ## SMA as a specification
 str(
-	talib::SMA(n = 20)
+	talib::SMA(timePeriod = 20)
 )
 
 ## -----------------------------------------------------------------------------
@@ -120,7 +120,8 @@ str(
 tail(
 	talib::bollinger_bands(
 		talib::BTC,
-		ma = talib::EMA(n = 20)
+		timePeriod = 20,
+		maType = talib::EMA()
 	)
 )
 
@@ -129,8 +130,10 @@ tail(
 tail(
 	talib::stochastic(
 		talib::BTC,
-		slowk = talib::WMA(n = 5),
-		slowd = talib::EMA(n = 3)
+		slowKPeriod = 5,
+		slowKMa = talib::EMA(),
+		slowDPeriod = 5,
+		slowDMa = talib::EMA()
 	)
 )
 
